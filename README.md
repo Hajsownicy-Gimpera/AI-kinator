@@ -74,4 +74,14 @@ ai-kinator/
 - ✅ Project structure created and organized
 - ✅ .gitignore files added
 
-**Next:** Task 2 - Backend room creation endpoints
+## ✅ Task 2 Acceptance Criteria – IN PROGRESS
+
+- ✅Data Models defined**: Pydantic models for Room creation request and response
+- ✅Room Creation Endpoint**: `POST /rooms` implemented in FastAPI
+- ✅Unique Room ID Generation**: Logic to generate short, unique alphanumeric IDs
+- ✅In-memory Storage/Database**: Basic dictionary or SQLite logic to store room state
+- ✅Validation**: Ensure room names/settings are validated before creation
+- ✅API Documentation**: Endpoint visible and testable via `/docs` (Swagger UI)
+- ✅Unit Tests**: Basic test cases for room creation (optional but recommended)
+
+**Next:** Task 3 - Room joining and player session management
