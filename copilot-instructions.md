@@ -1,5 +1,108 @@
 # Copilot Instructions – AI-kinator Project
 
+## 📦 Project Setup & Dependencies
+
+**UV Package Manager** is used for Python dependency management in this project.
+
+- **Installation:** `pip3 install uv`
+- **Verification:** `uv --version`
+- **Usage in project:** UV is automatically invoked during `npm install` via the `prepare` script
+
+### Automatic Setup Flow
+
+```bash
+npm install
+# → Triggers: cd backend && uv sync
+# → Creates Python virtual environment at backend/.venv
+# → Installs 22+ Python packages (FastAPI, SQLAlchemy, LangChain, etc.)
+# → Frontend dependencies installed with npm
+```
+
+---
+
+## 🚀 Build & Run Commands
+
+### Setup (from root directory)
+
+```bash
+# Install dependencies (backend uses uv manager, automatically triggered)
+npm install
+
+# Run both backend and frontend in parallel
+npm run dev
+```
+
+### Backend (Python + FastAPI + UV)
+
+```bash
+# Run development server (auto-reload enabled) - from root
+npm run backend
+
+# Or directly from backend folder
+cd backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Run production server
+cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000
+
+# Sync dependencies with uv (if needed)
+cd backend && uv sync
+```
+
+### Frontend (React)
+
+```bash
+# Run development server - from root
+npm run frontend
+
+# Or directly from frontend folder
+cd frontend && npm start
+
+# Build for production
+npm run build
+
+# Run tests
+npm test
+
+# Run specific test file
+npm test -- GameView
+```
+
+### Linting & Code Quality
+
+**Backend:**
+```bash
+cd backend
+
+# Format code with Black (if installed)
+black .
+
+# Run type checking with mypy (if installed)
+mypy .
+
+# Run linting with flake8 (if installed)
+flake8 .
+```
+
+**Frontend:**
+```bash
+cd frontend
+
+# Run ESLint
+npm run lint
+
+# Format code with Prettier (if installed)
+npm run format
+```
+
+**Key endpoints to test:**
+- `GET /` → `{"status": "ok"}`
+- `GET /health` → `{"status": "healthy"}`
+- `POST /games/solo` – Create solo game
+- `POST /games/duel` – Create duel room
+- `POST /games/battle-royale` – Create battle royale room
+
+---
+
 ## Project Identity & Core Goals
 
 **AI-kinator** is a web-based multiplayer game inspired by Akinator. The player asks questions to guess a secret character selected by the system from a predefined pool of ~1000 popular figures (e.g., from Wikipedia). The system responds exclusively with:
@@ -23,6 +126,7 @@ The game uses a Large Language Model (LLM) to generate responses dynamically, pr
 |----------------|------------------------------|
 | **Frontend**   | React (JavaScript)           |
 | **Backend**    | Python + FastAPI             |
+| **Package Mgr**| UV (Python dependency mgr)   |
 | **AI Module**  | LLM integrated via LangChain |
 | **Database**   | SQLite / JSON / lightweight  |
 | **Real‑time**  | Polling (no WebSockets)      |
