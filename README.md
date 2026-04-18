@@ -5,36 +5,43 @@ Zobacz w root folderze: copilot-instructions.md
 
 ---
 
-## 🚀 Quick Start – Task 1: Setup Complete ✅
+## 🚀 Quick Start
 
-### Backend Setup
+### Prerequisites
 
-```bash
-cd backend
-python -m pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
-```
+- **Node.js** (v18+)
+- **Python** (v3.14+)
+- **UV** package manager (automatically installed, or install manually: `pip3 install uv` or install from https://docs.astral.sh/uv/getting-started/installation/)
 
-The backend will be running at `http://localhost:8000`
-
-**Available endpoints:**
-- `GET /` → `{"status": "ok"}`
-- `GET /health` → `{"status": "healthy"}`
-
-### Frontend Setup
+### Installation & Running
 
 ```bash
-cd frontend
+# Install dependencies (backend uses uv manager, triggered automatically)
+# This will:
+# - Install frontend dependencies with npm
+# - Create Python virtual environment
+# - Install backend packages with uv
 npm install
-npm start
+
+# Run both backend and frontend in parallel
+npm run dev
 ```
 
-The frontend will open at `http://localhost:3000`
+This will start:
+- **Backend:** `http://localhost:8000` (FastAPI with auto-reload)
+- **Frontend:** `http://localhost:3000` (React development server)
 
-**What it does:**
-- Displays backend health status
-- Fetches from backend `/health` endpoint
-- Shows connection status
+**Or run individually:**
+
+```bash
+# Backend only (http://localhost:8000)
+npm run backend
+# Or: cd backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Frontend only (http://localhost:3000)
+npm run frontend
+# Or: cd frontend && npm start
+```
 
 ---
 

@@ -36,17 +36,30 @@
 
 ## Build & Run Commands
 
+### Setup (from root directory)
+
+```bash
+# Install dependencies (backend uses uv manager, automatically triggered)
+npm install
+
+# Run both backend and frontend in parallel
+npm run dev
+```
+
 ### Backend (Python + FastAPI)
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Run development server (auto-reload enabled) - from root
+npm run backend
 
-# Run development server (auto-reload enabled)
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Or directly from backend folder
+cd backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Run production server
-uvicorn main:app --host 0.0.0.0 --port 8000
+cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000
+
+# Sync dependencies with uv
+cd backend && uv sync
 ```
 
 **Key endpoints to test:**
@@ -58,11 +71,11 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ### Frontend (React)
 
 ```bash
-# Install dependencies
-npm install
+# Run development server - from root
+npm run frontend
 
-# Start development server (typically runs on http://localhost:3000)
-npm start
+# Or directly from frontend folder
+cd frontend && npm start
 
 # Build for production
 npm run build
@@ -78,6 +91,8 @@ npm test -- GameRoom.test.js
 
 **Backend:**
 ```bash
+cd backend
+
 # Format code with Black
 black .
 
@@ -90,6 +105,8 @@ flake8 .
 
 **Frontend:**
 ```bash
+cd frontend
+
 # Run ESLint
 npm run lint
 
