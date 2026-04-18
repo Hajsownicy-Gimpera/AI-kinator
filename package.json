@@ -1,0 +1,39 @@
+{
+  "name": "ai-kinator",
+  "version": "1.0.0",
+  "description": "Zobacz: [AIKINATOR-PROTOTYPE](docs/AIKINATOR-PROTOTYPE.md)\r Zobacz w root folderze: copilot-instructions.md",
+  "main": "index.js",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {
+    "npm-run-all": "*"
+  },
+  "scripts": {
+    "prepare": "cd backend && uv sync",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "backend": "cd backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "react": "cd frontend && npm start",
+    "frontend": "npm run react --workspace=frontend",
+    "dev": "npm-run-all --parallel backend frontend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hajsownicy-Gimpera/AI-kinator.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Hajsownicy-Gimpera/AI-kinator/issues"
+  },
+  "homepage": "https://github.com/Hajsownicy-Gimpera/AI-kinator#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

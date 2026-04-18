@@ -7,31 +7,32 @@ Zobacz w root folderze: copilot-instructions.md
 
 ## 🚀 Quick Start – Task 1: Setup Complete ✅
 
-### Backend Setup
+### Installation & Running
 
 ```bash
-cd backend
-python -m pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+# Install dependencies (backend uses uv manager, triggered automatically)
+npm install
+
+# Run both backend and frontend in parallel
+npm run dev
 ```
 
-The backend will be running at `http://localhost:8000`
+**Or run individually:**
+
+```bash
+# Backend only (http://localhost:8000)
+npm run backend
+
+# Frontend only (http://localhost:3000)
+npm run frontend
+```
 
 **Available endpoints:**
 - `GET /` → `{"status": "ok"}`
 - `GET /health` → `{"status": "healthy"}`
 
-### Frontend Setup
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-The frontend will open at `http://localhost:3000`
-
-**What it does:**
+**Frontend Features:**
+- Frontend opens on http://localhost:3000
 - Displays backend health status
 - Fetches from backend `/health` endpoint
 - Shows connection status
