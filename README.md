@@ -11,7 +11,7 @@ Zobacz w root folderze: copilot-instructions.md
 
 - **Node.js** (v18+)
 - **Python** (v3.14+)
-- **UV** package manager (automatically installed, or install manually: `pip3 install uv`)
+- **UV** package manager (automatically installed, or install manually: `pip3 install uv` or install from https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Installation & Running
 
