@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
+import GameView from './pages/GameView/GameView';
 import { useParams } from 'react-router-dom';
 
 const Home = () => {
@@ -19,15 +20,15 @@ const createRoom = async (mode) => {
     };
 
     const url = `http://localhost:8000${endpointMap[mode]}`;
-    console.log("Wysyłam żądanie do:", url);
+    console.log("Sending request to:", url);
 
     const response = await axios.post(url);
     
     const { room_id } = response.data;
     navigate(`/game/${room_id}`);
   } catch (err) {
-    console.error("Błąd szczegóły:", err.response);
-    alert("Błąd: " + (err.response?.data?.detail || err.message));
+    console.error("Error:", err.response);
+    alert("Error: " + (err.response?.data?.detail || err.message));
   } finally {
     setLoading(false);
   }
@@ -46,19 +47,6 @@ const createRoom = async (mode) => {
   );
 };
 
-const GameView = () => {
-  const { roomId } = useParams();
-
-  return (
-    <div className="App-header">
-      <h2>Widok Gry</h2>
-      <div className="success">
-        <p>Jesteś w pokoju: <strong>{roomId}</strong></p>
-      </div>
-      <button onClick={() => window.location.href = '/'}>Powrót do menu</button>
-    </div>
-  );
-};
 
 function App() {
   return (
