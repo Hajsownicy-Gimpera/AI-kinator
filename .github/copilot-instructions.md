@@ -1,6 +1,25 @@
 # Copilot Development Guide – AI-kinator
 
-Quick reference for building, testing, and understanding the AI-kinator codebase.
+**Last Updated:** 2026-04-18  
+**Status:** In Development (2/13 Tasks Completed)
+
+## 📊 Current Sprint Status
+
+### Completed (2/13)
+- ✅ BE-1: Backend setup + FastAPI (2026-04-08)
+- ✅ BE-2: Room creation endpoints with SQLite (2026-04-12)
+
+### In Progress / Ready (11/13)
+**Backend:** BE-3, BE-4, BE-5  
+**Frontend:** FE-2, FE-3, FE-4, FE-5  
+**LLM:** LLM-1 through LLM-6 (parallel stream)  
+**Integration:** INT-1
+
+**Full task details:** See `docs/AIKINATOR-PROTOTYPE.md`
+
+---
+
+## Quick Reference for Building, Testing, and Understanding the AI-kinator Codebase.
 
 ## Project Overview
 
@@ -17,30 +36,17 @@ Quick reference for building, testing, and understanding the AI-kinator codebase
 
 ## Build & Run Commands
 
-### Setup (from root directory)
-
-```bash
-# Install dependencies (backend uses uv manager, automatically triggered)
-npm install
-
-# Run both backend and frontend in parallel
-npm run dev
-```
-
 ### Backend (Python + FastAPI)
 
 ```bash
-# Run development server (auto-reload enabled) - from root
-npm run backend
+# Install dependencies
+pip install -r requirements.txt
 
-# Or directly from backend folder
-cd backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Run development server (auto-reload enabled)
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Run production server
-cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000
-
-# Sync dependencies with uv
-cd backend && uv sync
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 **Key endpoints to test:**
@@ -52,11 +58,11 @@ cd backend && uv sync
 ### Frontend (React)
 
 ```bash
-# Run development server - from root
-npm run frontend
+# Install dependencies
+npm install
 
-# Or directly from frontend folder
-cd frontend && npm start
+# Start development server (typically runs on http://localhost:3000)
+npm start
 
 # Build for production
 npm run build
@@ -72,8 +78,6 @@ npm test -- GameRoom.test.js
 
 **Backend:**
 ```bash
-cd backend
-
 # Format code with Black
 black .
 
@@ -86,8 +90,6 @@ flake8 .
 
 **Frontend:**
 ```bash
-cd frontend
-
 # Run ESLint
 npm run lint
 

@@ -1,15 +1,32 @@
-# AI-kinator Prototype v0.1 – Implementation Tasks for LLM
+# AI-kinator Prototype v0.1 – Implementation Tasks
 
-This document contains a structured list of implementation tasks for building the absolute minimal prototype of AI-kinator. The goal is to establish a working client-server skeleton with placeholder UI elements and dummy API endpoints. **No real game logic or LLM integration is required yet.**
+**Last Updated:** 2026-04-18  
+**Status:** In Development (2/7 Core Tasks Completed + 6 LLM Tasks Ready)
 
-## General Guidelines for Code Generation
+This document contains the complete roadmap for AI-kinator development, including completed tasks, in-progress work, and upcoming LLM integration.
 
-- Keep everything **extremely simple**.
-- Backend: Use FastAPI with in-memory storage (Python dicts).
-- Frontend: Use React functional components with hooks.
-- All endpoints should return hardcoded dummy responses (except basic CRUD for room creation).
-- Focus on **connectivity** and **basic UI structure**.
-- Do not implement actual AI calls, game rules, or multiplayer synchronization.
+## Sprint Status Overview
+
+### ✅ Completed Tasks (2/13)
+- **BE-1** (2026-04-08): Backend setup + FastAPI with health check
+- **BE-2** (2026-04-12): Room creation endpoints (solo, duel, battle-royale) with SQLite
+
+### 🔄 In Progress / Ready to Start (7 Core + 6 LLM)
+- **BE-3 to BE-5**: Backend room state, model expansion, question handling
+- **FE-2 to FE-5**: Frontend GameView, polling, styling
+- **LLM-1 to LLM-6**: LLM configuration, prompts, chain wrapper, tests, integration
+- **INT-1**: End-to-end integration testing
+
+---
+
+## General Development Guidelines
+
+- **Keep it simple**: Minimal viable features, no premature optimization.
+- **Backend**: FastAPI + SQLite (persistent storage), LangChain for LLM.
+- **Frontend**: React functional components, polling every 3s, Axios for API calls.
+- **LLM**: Only respond with "Tak" / "Nie" / "Nie wiem".
+- **Testing**: Unit tests required for critical logic (LLM validation, game state transitions).
+- **Focus**: Connectivity first, polish later.
 
 ---
 
@@ -172,39 +189,197 @@ This document contains a structured list of implementation tasks for building th
 
 ---
 
-## Notes for LLM
+---
 
-- When generating code for these tasks, **do not overcomplicate**.
-- Use simple, functional code; avoid premature optimization.
-- Backend storage can be plain Python dictionaries; no database needed.
-- Frontend state management can be local component state or simple Context.
-- The dummy responses should be static and identical for all rooms.
-```
+## Complete Task Roadmap (13 Tasks Total)
+
+### Phase 1: Backend Core (BE-3, BE-4, BE-5)
+
+**BE-3: Dummy Room State Endpoint** (High Priority)
+- Implement `GET /rooms/{room_id}/state`
+- Return full room state (room_id, game_mode, phase, players, conversation_history, winner_id)
+- Return 404 for non-existent rooms
+- Dummy conversation data
+
+**BE-4: Room Model Expansion** (High Priority)
+- Add columns to RoomDB: `phase`, `secret_character`, `players_json`, `history_json`
+- Create Pydantic schema `GameState`
+- Helper function: `get_room_with_state(room_id)`
+- Persist in SQLite
+
+**BE-5: Question Submission Endpoint** (High Priority)
+- Implement `POST /rooms/{room_id}/question`
+- Request: `{"player_id": "str", "question": "str"}`
+- Response: `{"answer": "Tak|Nie|Nie wiem", "updated_history": [...]}`
+- Dummy logic: random answer from 3 options
+- Store in room history
+
+### Phase 2: Frontend Core (FE-3, FE-4)
+
+
+**FE-3: GameView Component with Polling** (High Priority)
+- Routing: `/game/:roomId`
+- Poll `GET /rooms/{room_id}/state` every 3 seconds
+- Display: header, conversation history, input field, buttons
+- Error handling: 404, network errors
+- Loading spinner during polling
+
+**FE-4: Question & Guess Buttons** (High Priority)
+- Connect "Zadaj pytanie" → `POST /rooms/{room_id}/question`
+- Connect "Zgaduję postać" → `POST /rooms/{room_id}/guess`
+- Handle 404 gracefully (endpoint not yet implemented)
+- Disable buttons during sending
+- Trigger next poll on success
+
+### Phase 3: Integration (INT-1)
+
+**INT-1: End-to-End Testing** (High Priority)
+- Complete flow: select mode → create room → display GameView → polling → ask questions
+- "Powrót do menu" button works
+- No console errors
+- All game modes work (Solo, Duel, Battle Royale)
+- Clean network tab (proper error handling)
 
 ---
 
-## 2. Wersja do Kanbana – lista zadań do przypisania członkom zespołu
+## Parallel Stream: LLM Integration (LLM-1 to LLM-6)
 
-Poniższe zadania możesz skopiować bezpośrednio jako karty w GitHub Projects / Trello / Jira. Każde zawiera tytuł, krótki opis i kryteria akceptacji.
+These tasks can be done **independently** without blocking BE/FE work. Team can work on LLM while others handle core features.
 
-### 📋 Backlog – Prototyp v0.1
+### Phase 1: LLM Setup (LLM-1, LLM-2)
 
-| ID | Tytuł | Opis | Kryteria akceptacji | Przypisane do |
-|----|-------|------|---------------------|---------------|
-| **BE‑1** | Inicjalizacja projektu backend | Stwórz strukturę katalogów `backend/`, plik `requirements.txt` (fastapi, uvicorn, pydantic) oraz podstawowy plik `main.py` z endpointami `/` i `/health`. Dodaj CORS dla localhost:3000. | Uruchomienie `uvicorn` działa. Przeglądarka widzi `{"status":"ok"}` pod `localhost:8000`. | Backend team |
-| **BE‑2** | Endpointy tworzenia pokoi (dummy) | Zaimplementuj `POST /games/solo`, `/duel`, `/battle-royale`. Zwracaj unikalne `room_id` (uuid) i tryb gry. Przechowuj pokoje w słowniku w pamięci. | Każdy POST zwraca JSON z `room_id`. Pokoje są zapamiętywane. | Backend team |
-| **BE‑3** | Endpoint stanu pokoju (dummy) | Dodaj `GET /rooms/{room_id}/state`. Dla istniejącego ID zwróć zahardcodowany stan (historia rozmowy, faza, gracze). Dla nieistniejącego – 404. | Odpowiedź zawiera przykładowe dane. Test przez Postmana / przeglądarkę. | Backend team |
-| **FE‑1** | Inicjalizacja projektu frontend | Stwórz aplikację React (`create-react-app`), wyczyść boilerplate, zainstaluj `axios`. Skonfiguruj proxy do backendu (opcjonalnie). | `npm start` uruchamia apkę. Można wywołać backend. | Frontend team |
-| **FE‑2** | Ekran główny z wyborem trybu gry | Komponent `Home` z trzema przyciskami: Solo, Duel, Battle Royale. Po kliknięciu wywołaj odpowiedni endpoint BE, zapisz `room_id` i przejdź do widoku gry. | Kliknięcie przycisku tworzy pokój i przenosi do `/game`. Wyświetla się ID pokoju. | Frontend team |
-| **FE‑3** | Szkielet komponentu GameRoom + polling | Komponent `GameRoom` odpytuje co 3s `GET /rooms/{room_id}/state`. Wyświetla historię rozmowy (dummy), pole tekstowe (disabled) i przyciski "Zadaj pytanie", "Zgaduję postać". | Polling działa, dane się wyświetlają. Przyciski widoczne. | Frontend team |
-| **FE‑4** | Placeholder dla akcji pytania/zgadywania | Podłącz przyciski "Zadaj pytanie" i "Zgaduję postać" do (nieistniejących jeszcze) endpointów POST. Obsłuż błędy 404 w konsoli lub alertem. | Kliknięcie wywołuje żądanie sieciowe. Aplikacja nie crashuje. | Frontend team |
-| **INT‑1** | Integracja i test przepływu | Połącz wszystkie elementy: wybór trybu → utworzenie pokoju → wyświetlenie GameRoom → polling. Dodaj przycisk "Powrót do menu". | Można przejść pełną ścieżkę demo bez błędów. Kod w gałęzi `prototype-v0.1`. | Cały zespół |
+**LLM-1: Configure LangChain & Environment**
+- Install: `langchain`, `langchain-openai`, `python-dotenv`, `requests`
+- Create `.env` file with `OPENAI_API_KEY` (in .gitignore)
+- Create `./backend/ai/` directory
+- Create `./backend/ai/config.py` to load environment variables
+- Test connection to LLM (simple test script)
 
-### 📌 Uwagi do Kanbana
+**LLM-2: System Prompts**
+- Create `./backend/ai/prompts.py`
+- System prompt (Polish):
+  - Instruction: respond ONLY with "Tak", "Nie", or "Nie wiem"
+  - ~10 example characters (e.g., Jan Kowalski, Maria Skłodowska-Curie, Albert Einstein)
+  - Placeholders: `{secret_character}`, `{conversation_history}`
+- Dummy mode: random response from 3 options
 
-- Zadania **BE-1, BE-2, BE-3** mogą być realizowane równolegle lub sekwencyjnie.
-- Zadania **FE-1, FE-2, FE-3, FE-4** również.
-- **INT-1** wymaga ukończenia wszystkich poprzednich.
-- Proponowany limit WIP (Work In Progress): 2 zadania na osobę.
+### Phase 2: LLM Chain & Testing (LLM-3, LLM-4)
 
-Możesz dodać etykiety: `backend`, `frontend`, `prototype`, `high-priority`.
+**LLM-3: LLMChain Wrapper Class**
+- Create `./backend/ai/llm_chain.py`
+- Class `LLMChain`:
+  - `__init__(model, system_prompt, character_name)`
+  - `get_answer(question, conversation_history)` → `{"answer": "Tak|Nie|Nie wiem", "raw_response": "..."}`
+- Validation: ensure response is one of 3 words
+- Fallback: if LLM returns anything else → log warning + return "Nie wiem"
+- Dummy mode: if no API key → random response
+
+**LLM-4: Unit Tests**
+- Create `./backend/tests/test_llm_chain.py`
+- Tests:
+  1. `test_valid_answer_tak()` - "Tak" response
+  2. `test_valid_answer_nie()` - "Nie" response
+  3. `test_valid_answer_nie_wiem()` - "Nie wiem" response
+  4. `test_invalid_answer_fallback()` - Invalid → "Nie wiem"
+  5. `test_dummy_mode()` - No API key → random
+  6. `test_conversation_history()` - History accumulation
+- Use pytest, minimum 80% coverage
+
+### Phase 3: Integration & Production (LLM-5, LLM-6)
+
+**LLM-5: Integrate with BE-5 Question Endpoint** (Depends on BE-5)
+- Modify `POST /rooms/{room_id}/question`:
+  - Replace dummy logic with `LLMChain.get_answer()`
+  - Sequence:
+    1. Get room from DB
+    2. Get `secret_character` and history
+    3. Call `LLMChain.get_answer(question, history)`
+    4. Append to history
+    5. Save to DB
+    6. Return updated history
+- Error handling: LLM timeout → 504 or fallback "Nie wiem"
+- Test in Swagger UI
+
+**LLM-6: Production Configuration**
+- Create `.env.example` with template values (no secrets)
+- Documentation in README:
+  - How to install API key
+  - How to set variables for dev/prod
+  - Cost estimation (optional)
+- Ensure API key is NOT logged in console/logs
+- Secret management for CI/CD (optional)
+
+---
+
+## Task Dependencies & Recommended Sequence
+
+### Dependency Graph
+```
+BE-3 ← BE-2 (already done)
+BE-4 ← BE-3
+BE-5 ← BE-4
+FE-3 ← BE-3
+FE-4 ← FE-3 + BE-5
+INT-1 ← all of above
+
+LLM-1 → LLM-2 → LLM-3 → LLM-4 (sequential)
+LLM-5 ← BE-5 (integrate after BE-5)
+LLM-6 (anytime)
+```
+
+### Suggested Phase Execution
+
+**Week 1:**
+- BE-3, BE-4, BE-5 (sequential)
+- LLM-1, LLM-2 (parallel, independent)
+
+**Week 1-2:**
+- FE-2 (quick)
+- FE-3, FE-4 (dependent on BE-3, BE-5)
+- LLM-3, LLM-4 (parallel, independent)
+
+**Week 2:**
+- FE-5 (styling, can start anytime)
+- LLM-5 (after BE-5 ready)
+- LLM-6 (optional, anytime)
+- INT-1 (after everything above)
+
+**WIP Limit:** 2-3 tasks per person simultaneously
+
+---
+
+## Acceptance Criteria Summary
+
+### All Tasks Must Have:
+1. ✅ Code written and tested
+2. ✅ Git commit with descriptive message
+3. ✅ PR created and reviewed
+4. ✅ Merged to `main` branch
+5. ✅ No console errors/warnings
+6. ✅ Acceptance criteria met
+
+### Testing Requirements:
+- Backend endpoints: Test in Swagger UI (`/docs`)
+- Frontend: No console errors, buttons work
+- LLM: Unit tests pass, coverage ≥80%
+- Integration: Full flow without errors
+
+---
+
+## Additional Notes
+
+- **Dummy Data:** All endpoints return hardcoded dummy responses initially (except room creation).
+- **Database:** SQLite for persistence (auto-created in `akinator.db`).
+- **LLM Fallback:** If API fails → return "Nie wiem" (safe default).
+- **No WebSockets:** Use polling only (3-second intervals).
+- **Team Coordination:** Use GitHub Projects/Trello for task assignment and tracking.
+- **Documentation:** Keep README.md and copilot-instructions.md updated as work progresses.
+
+---
+
+## How to Access Task Details
+
+1. **Full Kanban Details:** See `.github/copilot-instructions.md` for development guide
+2. **Project Overview:** See `README.md` for quickstart and architecture
+3. **Task Tracking:** All tasks tracked in GitHub Projects Kanban board
+
