@@ -11,6 +11,10 @@ This document contains the complete roadmap for AI-kinator development, includin
 - **BE-1** (2026-04-08): Backend setup + FastAPI with health check
 - **BE-2** (2026-04-12): Room creation endpoints (solo, duel, battle-royale) with SQLite
 
+### 📌 Update (2026-04-19)
+- **BE-3 completed**: `GET /rooms/{room_id}/state` now returns prototype-compliant dummy state for existing rooms and `404` for unknown room IDs.
+- Added backend test coverage for both scenarios in `backend/tests/test_room_state.py`.
+
 ### 🔄 In Progress / Ready to Start (7 Core + 6 LLM)
 - **BE-3 to BE-5**: Backend room state, model expansion, question handling
 - **FE-2 to FE-5**: Frontend GameView, polling, styling
