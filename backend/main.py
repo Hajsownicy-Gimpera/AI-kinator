@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, String, DateTime
@@ -32,6 +32,26 @@ class RoomResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ConversationEntry(BaseModel):
+    role: str
+    content: str
+
+
+class PlayerState(BaseModel):
+    player_id: str
+    username: str
+    guess_count: int
+
+
+class RoomStateResponse(BaseModel):
+    room_id: str
+    game_mode: str
+    phase: str
+    players: list[PlayerState]
+    conversation_history: list[ConversationEntry]
+    winner: str | None
 
 # --- APLIKACJA ---
 app = FastAPI(title="AI-kinator Backend")
@@ -85,3 +105,34 @@ def create_duel_game(db: Session = Depends(get_db)):
 @app.post("/games/battle-royale", response_model=RoomResponse)
 def create_br_game(db: Session = Depends(get_db)):
     return create_room_logic("battle_royale", db)
+
+
+@app.get("/rooms/{room_id}/state", response_model=RoomStateResponse)
+def get_room_state(room_id: str, db: Session = Depends(get_db)):
+    room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    return {
+        "room_id": room.room_id,
+        "game_mode": "solo",
+        "phase": "active",
+        "players": [
+            {
+                "player_id": "p1",
+                "username": "Gracz1",
+                "guess_count": 0,
+            },
+        ],
+        "conversation_history": [
+            {
+                "role": "player",
+                "content": "Czy ta postac jest prawdziwa?",
+            },
+            {
+                "role": "ai",
+                "content": "Tak",
+            },
+        ],
+        "winner": None,
+    }
