@@ -16,15 +16,19 @@ def test_get_room_state_returns_hardcoded_state_for_existing_room():
     assert response.status_code == 200
     payload = response.json()
     assert payload["room_id"] == room_id
-    assert payload["game_mode"] == "solo"
-    assert payload["phase"] == "active"
+    assert "secret_character" not in payload
+    assert payload["game_mode"] == "duel"
+    assert payload["game_phase"] == "waiting"
     assert len(payload["players"]) == 1
+    assert payload["players"][0]["has_guessed"] is False
+    assert payload["players"][0]["guessed_at"] is None
     assert len(payload["conversation_history"]) == 2
     assert payload["conversation_history"][0]["role"] == "player"
     assert payload["conversation_history"][1]["role"] == "ai"
-    assert payload["conversation_history"][0]["content"] == "Czy ta postac jest prawdziwa?"
-    assert payload["conversation_history"][1]["content"] == "Tak"
-    assert payload["winner"] is None
+    assert payload["conversation_history"][0]["question"] == "Czy ta postac jest prawdziwa?"
+    assert payload["conversation_history"][1]["answer"] == "Tak"
+    assert payload["winner_id"] is None
+    assert isinstance(payload["created_at"], str)
 
 
 def test_get_room_state_returns_404_for_unknown_room_id():
