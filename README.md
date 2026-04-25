@@ -49,18 +49,25 @@ npm run frontend
 ```
 ai-kinator/
 ├── backend/
-│   ├── main.py                 # FastAPI app with / and /health endpoints
+│   ├── main.py                 # FastAPI app with endpoints
+│   ├── pyproject.toml          # Python project config
 │   ├── requirements.txt        # Python dependencies
+│   ├── tests/
+│   │   └── test_room_state.py # Room state tests
 │   └── .gitignore
 ├── frontend/
 │   ├── package.json            # React app configuration
 │   ├── public/
 │   │   └── index.html
 │   ├── src/
-│   │   ├── App.js              # Main component (displays health status)
+│   │   ├── App.js              # Main component
 │   │   ├── App.css
 │   │   ├── index.js
-│   │   └── index.css
+│   │   ├── index.css
+│   │   └── pages/
+│   │       └── GameView/       # Game room component
+│   │           ├── GameView.js # Room state polling, chat, input
+│   │           └── GameView.css
 │   └── .gitignore
 ├── docs/
 │   └── AIKINATOR-PROTOTYPE.md  # Implementation tasks
