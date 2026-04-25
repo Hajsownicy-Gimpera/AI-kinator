@@ -48,7 +48,7 @@ class PlayerState(BaseModel):
     guessed_at: datetime | None
 
 
-class RoomStateResponse(BaseModel):
+class RoomHistoryResponse(BaseModel):
     room_id: str
     game_mode: str
     game_phase: str
@@ -56,6 +56,24 @@ class RoomStateResponse(BaseModel):
     conversation_history: list[ConversationEntry]
     winner_id: str | None
     created_at: datetime
+    
+class RoomStateResponse(BaseModel):
+    room_id: str
+    game_mode: str
+    game_phase: str
+    players: list[PlayerState]
+    winner_id: str | None
+    created_at: datetime
+
+
+class QuestionRequest(BaseModel):
+    player_id: str
+    question: str
+
+
+class QuestionResponse(BaseModel):
+    question_id: str
+    answer: str  # Must be: "Tak", "Nie", or "Nie wiem"
 
 # --- APLIKACJA ---
 app = FastAPI(title="AI-kinator Backend")
@@ -111,8 +129,9 @@ def create_br_game(db: Session = Depends(get_db)):
     return create_room_logic("battle_royale", db)
 
 
-@app.get("/rooms/{room_id}/state", response_model=RoomStateResponse)
-def get_room_state(room_id: str, db: Session = Depends(get_db)):
+@app.get("/rooms/{room_id}/history", response_model=RoomHistoryResponse)
+def get_room_history(room_id: str, db: Session = Depends(get_db)):
+    """Get full room history including all conversation (initial load only)."""
     room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -142,4 +161,56 @@ def get_room_state(room_id: str, db: Session = Depends(get_db)):
         "game_phase": "waiting" if room.status == "waiting" else "active",
         "winner_id": None,
         "created_at": room.created_at,
+    }
+
+
+@app.get("/rooms/{room_id}/state", response_model=RoomStateResponse)
+def get_room_state_polling(room_id: str, db: Session = Depends(get_db)):
+    """Get current game state for polling (no conversation history)."""
+    room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    return {
+        "room_id": room.room_id,
+        "game_mode": room.game_mode,
+        "players": [
+            {
+                "player_id": "p1",
+                "username": "Gracz1",
+                "guess_count": 0,
+                "has_guessed": False,
+                "guessed_at": None,
+            },
+        ],
+        "game_phase": "waiting" if room.status == "waiting" else "active",
+        "winner_id": None,
+        "created_at": room.created_at,
+    }
+
+
+@app.post("/rooms/{room_id}/question", response_model=QuestionResponse)
+def submit_question(room_id: str, request: QuestionRequest, db: Session = Depends(get_db)):
+    """Submit a question and get AI response (Tak/Nie/Nie wiem)."""
+    room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    # TODO: Integrate LangChain for LLM response
+    # Example implementation:
+    # 1. Fetch room's secret_character from database
+    # 2. Get conversation history from database
+    # 3. Call LLM with system prompt: "You are Akinator's mind. Secret character: {secret}. Conversation: {history}. Answer: {question}"
+    # 4. Parse response to ensure it's only "Tak", "Nie", or "Nie wiem"
+    # 5. Save question and answer to database
+    # 6. Return response
+
+    # Mock implementation for now
+    mock_answers = ["Tak", "Nie", "Nie wiem"]
+    import random
+    answer = random.choice(mock_answers)
+
+    return {
+        "question_id": f"q_{uuid.uuid4()}",
+        "answer": answer,
     }
