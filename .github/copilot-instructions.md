@@ -57,7 +57,7 @@ cd backend && uv sync
 - `POST /games/solo` – Create solo game
 - `POST /games/duel` – Create duel room
 - `POST /games/battle-royale` – Create battle royale room
-- `GET /rooms/{room_id}/history` – Full room history with conversation (initial load)
+- `GET /rooms/{room_id}/join` – Full room history with conversation (initial load)
 - `GET /rooms/{room_id}/state` – Current game state for polling (no conversation history)
 - `POST /rooms/{room_id}/question` – Submit question and get AI response
 
@@ -202,7 +202,7 @@ Your answer:
 
 ### Polling & State Updates
 
-- **Initial load:** `GET /rooms/{room_id}/history` fetches full room state + conversation history (called once on component mount)
+- **Initial load:** `GET /rooms/{room_id}/join` fetches full room state + conversation history (called once on component mount)
 - **Polling endpoint:** `GET /rooms/{room_id}/state` polls every 3 seconds for game state updates (no conversation history)
 - **Question submission:** `POST /rooms/{room_id}/question` submits question and immediately returns AI answer
 - **Conversation updates:** Frontend maintains separate `conversationHistory` state, only updated by question submissions and initial load
@@ -368,7 +368,7 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 
 **Features Implemented:**
 - **Dual Data Fetching Strategy:**
-  - Initial load: `GET /rooms/{room_id}/history` (full state + conversation history)
+  - Initial load: `GET /rooms/{room_id}/join` (full state + conversation history)
   - Polling: `GET /rooms/{room_id}/state` every 3 seconds (game status only)
 - **Separate State Management:**
   - `roomState` – Players, game phase, winner (updated by polling)
@@ -385,7 +385,7 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 - React Hooks: `useState`, `useEffect`, `useRef`, `useCallback`
 
 **State Flow:**
-1. Component mount → Fetch history from `/history` → Set `roomState` + `conversationHistory`
+1. Component mount → Fetch history from `/join` → Set `roomState` + `conversationHistory`
 2. Polling starts → Every 3 seconds fetch `/state` → Update `roomState` only
 3. User submits question → POST to `/question` → Add Q&A to `conversationHistory`
 

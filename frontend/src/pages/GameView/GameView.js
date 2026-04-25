@@ -38,7 +38,7 @@ const GameView = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch(`${API_URL}/rooms/${roomId}/history`);
+        const response = await fetch(`${API_URL}/rooms/${roomId}/join`);
         if (!response.ok) {
           throw new Error(`Failed to fetch history: ${response.statusText}`);
         }
