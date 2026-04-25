@@ -19,7 +19,7 @@ def test_ask_question_returns_valid_answer():
     assert response.status_code == 200
     data = response.json()
     assert data["answer"] in VALID_ANSWERS
-    assert "raw_response" in data
+    assert "raw_response" not in data
     assert len(data["updated_history"]) == 2
     assert data["updated_history"][0]["role"] == "player"
     assert data["updated_history"][0]["question"] == "Czy ta postac jest fikcyjna?"
@@ -51,6 +51,28 @@ def test_ask_question_room_not_found():
         json={"player_id": "p1", "question": "Test?"},
     )
     assert response.status_code == 404
+
+
+def test_ask_question_rejects_empty():
+    room = client.post("/games/solo").json()
+    room_id = room["room_id"]
+
+    response = client.post(
+        f"/rooms/{room_id}/question",
+        json={"player_id": "p1", "question": "   "},
+    )
+    assert response.status_code == 400
+
+
+def test_ask_question_rejects_too_long():
+    room = client.post("/games/solo").json()
+    room_id = room["room_id"]
+
+    response = client.post(
+        f"/rooms/{room_id}/question",
+        json={"player_id": "p1", "question": "a" * 501},
+    )
+    assert response.status_code == 400
 
 
 def test_room_state_reflects_question_history():

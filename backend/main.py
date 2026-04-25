@@ -75,7 +75,6 @@ class QuestionRequest(BaseModel):
 
 class QuestionResponse(BaseModel):
     answer: str
-    raw_response: str
     updated_history: list[ConversationEntry]
 
 
@@ -172,6 +171,10 @@ def ask_question(
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
 
+    question = request.question.strip()
+    if not question or len(question) > 500:
+        raise HTTPException(status_code=400, detail="Question must be between 1 and 500 characters")
+
     history = json.loads(room.conversation_history or "[]")
 
     chain = LLMChain(character_name=room.secret_character)
@@ -181,7 +184,7 @@ def ask_question(
         logger.exception("LLM timeout / error for room %s", room_id)
         result = {"answer": "Nie wiem", "raw_response": "[timeout]"}
 
-    history.append({"role": "player", "question": request.question})
+    history.append({"role": "player", "question": question})
     history.append({"role": "ai", "answer": result["answer"]})
 
     room.conversation_history = json.dumps(history, ensure_ascii=False)
@@ -190,6 +193,5 @@ def ask_question(
 
     return {
         "answer": result["answer"],
-        "raw_response": result["raw_response"],
         "updated_history": history,
     }
