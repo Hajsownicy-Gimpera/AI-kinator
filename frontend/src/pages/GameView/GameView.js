@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useParams} from 'react-router-dom';
 
 const GameView = () => {
   const { roomId } = useParams();
