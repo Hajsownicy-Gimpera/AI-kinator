@@ -1,7 +1,7 @@
 # Copilot Development Guide – AI-kinator
 
 **Last Updated:** 2026-04-25  
-**Status:** In Development (9/21 Tasks Completed)
+**Status:** In Development (11/21 Tasks Completed) – Question endpoint + optimized data fetching
 
 ## 📊 Current Sprint Status
 
@@ -57,7 +57,9 @@ cd backend && uv sync
 - `POST /games/solo` – Create solo game
 - `POST /games/duel` – Create duel room
 - `POST /games/battle-royale` – Create battle royale room
-- `GET /rooms/{room_id}/state` – Client-safe room state (without `secret_character`)
+- `GET /rooms/{room_id}/history` – Full room history with conversation (initial load)
+- `GET /rooms/{room_id}/state` – Current game state for polling (no conversation history)
+- `POST /rooms/{room_id}/question` – Submit question and get AI response
 
 ### Frontend (React)
 
@@ -200,10 +202,11 @@ Your answer:
 
 ### Polling & State Updates
 
-- **Polling endpoint:** `GET /rooms/{room_id}/state` returns full room state
-- **Response includes:** current phase, all player states, updated history (safe for clients)
-- **Security contract:** state response must omit `secret_character`; returned fields are `room_id`, `game_mode`, `players`, `conversation_history`, `game_phase`, `winner_id`, `created_at`
-- **Caching:** Include `ETag` or `Last-Modified` headers to reduce bandwidth
+- **Initial load:** `GET /rooms/{room_id}/history` fetches full room state + conversation history (called once on component mount)
+- **Polling endpoint:** `GET /rooms/{room_id}/state` polls every 3 seconds for game state updates (no conversation history)
+- **Question submission:** `POST /rooms/{room_id}/question` submits question and immediately returns AI answer
+- **Conversation updates:** Frontend maintains separate `conversationHistory` state, only updated by question submissions and initial load
+- **Security contract:** state response must omit `secret_character`; returned fields are `room_id`, `game_mode`, `players`, `game_phase`, `winner_id`, `created_at`
 - **Timeout:** Game rooms expire after 30 minutes of inactivity
 
 ### API Request/Response Format
@@ -212,7 +215,7 @@ Your answer:
 ```json
 POST /rooms/{room_id}/question
 {
-    "player_id": "user123",
+    "player_id": "player_1",
     "question": "Czy ta osoba jest znana z polityki?"
 }
 ```
@@ -221,13 +224,13 @@ POST /rooms/{room_id}/question
 ```json
 {
     "question_id": "q_abc123",
-    "answer": "Tak",
-    "updated_history": [
-        {"role": "player", "question": "..."},
-        {"role": "ai", "answer": "Tak"}
-    ]
+    "answer": "Tak"
 }
 ```
+
+**Frontend behavior:**
+- On question submission, add both question and answer to `conversationHistory` immediately
+- Polling updates `roomState` (game phase, players, etc.) but never touches conversation history
 
 ### Error Handling
 
@@ -263,20 +266,28 @@ ai-kinator/
 ├── frontend/
 │   ├── package.json
 │   ├── public/
+│   │   └── index.html
 │   ├── src/
-│   │   ├── App.js
-│   │   ├── components/
+│   │   ├── App.js                  # Main component
+│   │   ├── App.css
+│   │   ├── index.js
+│   │   ├── index.css
+│   │   ├── pages/
+│   │   │   └── GameView/           # Game room interface
+│   │   │       ├── GameView.js     # Room state polling, chat, input
+│   │   │       └── GameView.css    # Responsive game UI
+│   │   ├── components/             # (Planned)
 │   │   │   ├── GameRoom.js
 │   │   │   ├── QuestionInput.js
 │   │   │   └── Leaderboard.js
-│   │   ├── hooks/
-│   │   │   ├── useGameState.js      # Polling logic
+│   │   ├── hooks/                  # (Planned)
+│   │   │   ├── useGameState.js     # Polling logic
 │   │   │   └── useGameSession.js
-│   │   ├── context/
+│   │   ├── context/                # (Planned)
 │   │   │   └── GameContext.js
-│   │   ├── api/
-│   │   │   └── client.js            # REST client
-│   │   └── tests/
+│   │   ├── api/                    # (Planned)
+│   │   │   └── client.js           # REST client
+│   │   └── tests/                  # (Planned)
 │   │       └── GameRoom.test.js
 │   └── .eslintrc.json
 ├── .github/
@@ -349,6 +360,75 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 
 ---
 
+## Implementation Status & Notes
+
+### ✅ GameView Component (Complete)
+
+**Location:** `frontend/src/pages/GameView/`
+
+**Features Implemented:**
+- **Dual Data Fetching Strategy:**
+  - Initial load: `GET /rooms/{room_id}/history` (full state + conversation history)
+  - Polling: `GET /rooms/{room_id}/state` every 3 seconds (game status only)
+- **Separate State Management:**
+  - `roomState` – Players, game phase, winner (updated by polling)
+  - `conversationHistory` – Chat messages (updated only by question submissions)
+- **Layout:** 30% left (akinator image placeholder), 70% right (scrollable chat)
+- **Chat Display:** Messages from `conversationHistory` with player/AI distinction
+- **User Input:** Text input with validation, send button, auto-disables when empty
+- **Auto-scroll:** Smoothly scrolls to latest messages when conversation updates
+- **Error Handling:** Displays user-friendly error messages and loading states
+- **Responsive:** Adapts to mobile/tablet (stacks vertically on smaller screens)
+
+**Key Dependencies:**
+- `react-router-dom` (for `useParams`, `useNavigate`)
+- React Hooks: `useState`, `useEffect`, `useRef`, `useCallback`
+
+**State Flow:**
+1. Component mount → Fetch history from `/history` → Set `roomState` + `conversationHistory`
+2. Polling starts → Every 3 seconds fetch `/state` → Update `roomState` only
+3. User submits question → POST to `/question` → Add Q&A to `conversationHistory`
+
+**To Use:**
+```javascript
+// Add route to App.js
+<Route path="/room/:roomId" element={<GameView />} />
+
+// Navigate to game
+navigate(`/room/${roomId}`);
+```
+
+---
+
+## Git Workflow & Branching
+
+### Branch Naming Convention
+
+Follow the ticket ID format for branch names:
+
+**Format:** `{TICKET_ID}-{description}`
+
+**Examples:**
+- Ticket: `FE-3: Szkielet programu` → Branch: `FE-3-skeleton-setup`
+- Ticket: `BE-5: API endpoints` → Branch: `BE-5-api-endpoints`
+- Ticket: `AI-2: LLM integration` → Branch: `AI-2-llm-integration`
+
+**Guidelines:**
+- Use kebab-case (hyphens, no spaces)
+- Start with ticket ID (e.g., `FE-3`, `BE-5`)
+- Follow with short descriptive slug (2-4 words)
+- Use English lowercase
+- No special characters except hyphens
+- Keep it under 50 characters total when possible
+
+**Workflow:**
+1. Create local branch: `git checkout -b FE-3-feature-name`
+2. Commit with ticket reference: `FE-3 Added feature X`
+3. Push branch: `git push origin FE-3-feature-name`
+4. Create pull request with ticket link in description
+
+---
+
 ## Common Development Tasks
 
 ### Adding a New Endpoint
@@ -372,6 +452,20 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 - Test LLM response directly: `python -m pytest tests/test_llm_chain.py -v`
 - Log all LLM inputs/outputs to `debug.log` for analysis
 - Use fallback answer `"Nie wiem"` if LLM behaves unexpectedly
+
+### Implementing LLM Integration (Next)
+
+The `/rooms/{room_id}/question` endpoint has been created with mock implementation. To integrate LangChain:
+
+1. Create `backend/ai/llm_chain.py` with LangChain wrapper
+2. Create `backend/ai/prompts.py` with system prompts
+3. Update `POST /rooms/{room_id}/question` to:
+   - Fetch room's secret character from database
+   - Fetch conversation history from database
+   - Call LLM with system prompt + context
+   - Validate response (must be "Tak", "Nie", or "Nie wiem")
+   - Save Q&A to database
+   - Return response to frontend
 
 ---
 
@@ -400,4 +494,4 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 
 - **Project Spec:** `copilot-instructions.md` (project requirements & team roles)
 
-*Last updated: 2026-04-08. Update this file as project structure and conventions evolve.*
+*Last updated: 2026-04-25. Update this file as project structure and conventions evolve.*
