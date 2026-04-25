@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import axios from 'axios';
 import './App.css';
 import GameView from './pages/GameView/GameView';
-import { useParams } from 'react-router-dom';
 
 const Home = () => {
   const [loading, setLoading] = useState(false);
