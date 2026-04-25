@@ -36,22 +36,26 @@ class RoomResponse(BaseModel):
 
 class ConversationEntry(BaseModel):
     role: str
-    content: str
+    question: str | None = None
+    answer: str | None = None
 
 
 class PlayerState(BaseModel):
     player_id: str
     username: str
     guess_count: int
+    has_guessed: bool
+    guessed_at: datetime | None
 
 
 class RoomStateResponse(BaseModel):
     room_id: str
     game_mode: str
-    phase: str
+    game_phase: str
     players: list[PlayerState]
     conversation_history: list[ConversationEntry]
-    winner: str | None
+    winner_id: str | None
+    created_at: datetime
 
 # --- APLIKACJA ---
 app = FastAPI(title="AI-kinator Backend")
@@ -115,24 +119,27 @@ def get_room_state(room_id: str, db: Session = Depends(get_db)):
 
     return {
         "room_id": room.room_id,
-        "game_mode": "solo",
-        "phase": "active",
+        "game_mode": room.game_mode,
         "players": [
             {
                 "player_id": "p1",
                 "username": "Gracz1",
                 "guess_count": 0,
+                "has_guessed": False,
+                "guessed_at": None,
             },
         ],
         "conversation_history": [
             {
                 "role": "player",
-                "content": "Czy ta postac jest prawdziwa?",
+                "question": "Czy ta postac jest prawdziwa?",
             },
             {
                 "role": "ai",
-                "content": "Tak",
+                "answer": "Tak",
             },
         ],
-        "winner": None,
+        "game_phase": "waiting" if room.status == "waiting" else "active",
+        "winner_id": None,
+        "created_at": room.created_at,
     }

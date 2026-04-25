@@ -1,6 +1,6 @@
 # Copilot Development Guide – AI-kinator
 
-**Last Updated:** 2026-04-19  
+**Last Updated:** 2026-04-25  
 **Status:** In Development (9/21 Tasks Completed)
 
 ## 📊 Current Sprint Status
@@ -57,6 +57,7 @@ cd backend && uv sync
 - `POST /games/solo` – Create solo game
 - `POST /games/duel` – Create duel room
 - `POST /games/battle-royale` – Create battle royale room
+- `GET /rooms/{room_id}/state` – Client-safe room state (without `secret_character`)
 
 ### Frontend (React)
 
@@ -178,7 +179,6 @@ Your answer:
 {
     "room_id": str,
     "game_mode": "duel" | "battle_royale" | "solo",
-    "secret_character": str,  # Hidden from client during game
     "players": [
         {
             "player_id": str,
@@ -202,6 +202,7 @@ Your answer:
 
 - **Polling endpoint:** `GET /rooms/{room_id}/state` returns full room state
 - **Response includes:** current phase, all player states, updated history (safe for clients)
+- **Security contract:** state response must omit `secret_character`; returned fields are `room_id`, `game_mode`, `players`, `conversation_history`, `game_phase`, `winner_id`, `created_at`
 - **Caching:** Include `ETag` or `Last-Modified` headers to reduce bandwidth
 - **Timeout:** Game rooms expire after 30 minutes of inactivity
 
