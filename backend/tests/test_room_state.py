@@ -6,7 +6,7 @@ from main import app
 client = TestClient(app)
 
 
-def test_get_room_state_returns_hardcoded_state_for_existing_room():
+def test_get_room_state_returns_state_for_existing_room():
     create_response = client.post("/games/duel")
     assert create_response.status_code == 200
     room_id = create_response.json()["room_id"]
@@ -22,11 +22,7 @@ def test_get_room_state_returns_hardcoded_state_for_existing_room():
     assert len(payload["players"]) == 1
     assert payload["players"][0]["has_guessed"] is False
     assert payload["players"][0]["guessed_at"] is None
-    assert len(payload["conversation_history"]) == 2
-    assert payload["conversation_history"][0]["role"] == "player"
-    assert payload["conversation_history"][1]["role"] == "ai"
-    assert payload["conversation_history"][0]["question"] == "Czy ta postac jest prawdziwa?"
-    assert payload["conversation_history"][1]["answer"] == "Tak"
+    assert payload["conversation_history"] == []
     assert payload["winner_id"] is None
     assert isinstance(payload["created_at"], str)
 
