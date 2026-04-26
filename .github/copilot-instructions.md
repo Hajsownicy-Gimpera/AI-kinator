@@ -1,11 +1,17 @@
 # Copilot Development Guide – AI-kinator
 
-**Last Updated:** 2026-04-25  
-**Status:** In Development (9/21 Tasks Completed)
+**Last Updated:** 2026-04-26  
+**Status:** In Development (13/21 Tasks Completed)
 
 ## 📊 Current Sprint Status
 
 **Full task details:** See `docs/AIKINATOR-PROTOTYPE.md`
+
+### Recently Completed (LLM-1 through LLM-4)
+- **LLM-1:** LangChain + Google Gemini configured (`backend/ai/config.py`), dependencies added, `.env.example` created
+- **LLM-2:** System prompt in Polish with 10 example characters, placeholders, dummy mode (`backend/ai/prompts.py`)
+- **LLM-3:** `LLMChain` wrapper with validation, "Nie wiem" fallback, retry (2 attempts with backoff), dummy mode (`backend/ai/llm_chain.py`)
+- **LLM-4:** `POST /rooms/{room_id}/question` endpoint integrated with LLMChain, conversation history persisted in DB, input validation (1-500 chars)
 
 ---
 

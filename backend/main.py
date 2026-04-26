@@ -69,7 +69,6 @@ class RoomStateResponse(BaseModel):
     created_at: datetime
 
 class QuestionRequest(BaseModel):
-    player_id: str
     question: str
 
 
@@ -179,10 +178,10 @@ def ask_question(
 
     chain = LLMChain(character_name=room.secret_character)
     try:
-        result = chain.get_answer(request.question, history)
+        result = chain.get_answer(question, history)
     except Exception:
         logger.exception("LLM timeout / error for room %s", room_id)
-        result = {"answer": "Nie wiem", "raw_response": "[timeout]"}
+        result = {"answer": "Nie wiem"}
 
     history.append({"role": "player", "question": question})
     history.append({"role": "ai", "answer": result["answer"]})

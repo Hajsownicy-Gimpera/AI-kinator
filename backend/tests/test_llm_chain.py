@@ -6,7 +6,6 @@ def test_dummy_mode_returns_valid_answer():
     chain = LLMChain("Batman")
     result = chain.get_answer("Czy ta postac jest fikcyjna?", [])
     assert result["answer"] in VALID_ANSWERS
-    assert "raw_response" in result
 
 
 def test_dummy_mode_with_history():

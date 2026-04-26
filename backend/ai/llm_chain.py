@@ -1,4 +1,5 @@
 import logging
+import time
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -11,6 +12,9 @@ from ai.prompts import (
 )
 
 logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 2
+RETRY_BACKOFF = 1.0
 
 
 class LLMChain:
@@ -25,11 +29,11 @@ class LLMChain:
         Ask the LLM a yes/no question about the secret character.
 
         Returns:
-            {"answer": "Tak"|"Nie"|"Nie wiem", "raw_response": str}
+            {"answer": "Tak"|"Nie"|"Nie wiem"}
         """
         if self.llm is None:
             dummy = get_dummy_answer()
-            return {"answer": dummy, "raw_response": f"[dummy] {dummy}"}
+            return {"answer": dummy}
 
         prompt_text = SYSTEM_PROMPT.format(
             secret_character=self.character_name,
@@ -39,19 +43,32 @@ class LLMChain:
             question=question,
         )
 
-        try:
-            response = self.llm.invoke(
-                [
-                    SystemMessage(content=prompt_text),
-                    HumanMessage(content=question),
-                ]
-            )
-            raw = response.content.strip()
-            answer = self._validate(raw)
-            return {"answer": answer, "raw_response": raw}
-        except Exception:
-            logger.exception("LLM call failed")
-            return {"answer": "Nie wiem", "raw_response": "[error]"}
+        messages = [
+            SystemMessage(content=prompt_text),
+            HumanMessage(content=question),
+        ]
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = self.llm.invoke(messages)
+                content = response.content
+                if isinstance(content, list):
+                    content = "".join(
+                        part.get("text", "") if isinstance(part, dict) else str(part)
+                        for part in content
+                    )
+                raw = content.strip()
+                answer = self._validate(raw)
+                return {"answer": answer}
+            except Exception:
+                logger.warning(
+                    "LLM call attempt %d/%d failed", attempt, MAX_RETRIES,
+                    exc_info=True,
+                )
+                if attempt < MAX_RETRIES:
+                    time.sleep(RETRY_BACKOFF * attempt)
+
+        return {"answer": "Nie wiem"}
 
     @staticmethod
     def _validate(raw_response: str) -> str:

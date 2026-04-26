@@ -13,7 +13,7 @@ def test_ask_question_returns_valid_answer():
 
     response = client.post(
         f"/rooms/{room_id}/question",
-        json={"player_id": "p1", "question": "Czy ta postac jest fikcyjna?"},
+        json={"question": "Czy ta postac jest fikcyjna?"},
     )
 
     assert response.status_code == 200
@@ -33,11 +33,11 @@ def test_ask_question_appends_to_history():
 
     client.post(
         f"/rooms/{room_id}/question",
-        json={"player_id": "p1", "question": "Pytanie 1?"},
+        json={"question": "Pytanie 1?"},
     )
     response = client.post(
         f"/rooms/{room_id}/question",
-        json={"player_id": "p1", "question": "Pytanie 2?"},
+        json={"question": "Pytanie 2?"},
     )
 
     data = response.json()
@@ -48,7 +48,7 @@ def test_ask_question_appends_to_history():
 def test_ask_question_room_not_found():
     response = client.post(
         "/rooms/nonexistent/question",
-        json={"player_id": "p1", "question": "Test?"},
+        json={"question": "Test?"},
     )
     assert response.status_code == 404
 
@@ -59,7 +59,7 @@ def test_ask_question_rejects_empty():
 
     response = client.post(
         f"/rooms/{room_id}/question",
-        json={"player_id": "p1", "question": "   "},
+        json={"question": "   "},
     )
     assert response.status_code == 400
 
@@ -70,7 +70,7 @@ def test_ask_question_rejects_too_long():
 
     response = client.post(
         f"/rooms/{room_id}/question",
-        json={"player_id": "p1", "question": "a" * 501},
+        json={"question": "a" * 501},
     )
     assert response.status_code == 400
 
@@ -81,7 +81,7 @@ def test_room_state_reflects_question_history():
 
     client.post(
         f"/rooms/{room_id}/question",
-        json={"player_id": "p1", "question": "Czy to czlowiek?"},
+        json={"question": "Czy to czlowiek?"},
     )
 
     state = client.get(f"/rooms/{room_id}/state").json()
