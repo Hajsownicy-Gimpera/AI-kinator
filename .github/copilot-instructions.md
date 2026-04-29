@@ -1,7 +1,7 @@
 # Copilot Development Guide – AI-kinator
 
-**Last Updated:** 2026-04-25  
-**Status:** In Development (11/21 Tasks Completed) – Question endpoint + optimized data fetching
+**Last Updated:** 2026-04-29  
+**Status:** In Development (12/21 Tasks Completed) – Room state persistence + question endpoint + optimized data fetching
 
 ## 📊 Current Sprint Status
 
@@ -129,6 +129,7 @@ npm run format
 - `GameSession` – Tracks solo game: secret character, conversation history, guess count
 - `GameRoom` – Tracks multiplayer game: players, shared secret, per-player guesses, ranked leaderboard
 - `LLMChain` – Wrapped LLM interface ensuring responses are `Tak`, `Nie`, or `Nie wiem`
+- `RoomDB` – Persistent room state columns for `phase`, `secret_character`, `players_json`, and `history_json`
 
 **Frontend Structure:**
 - `GameContext` – Global game state (current room, player info, game phase)
@@ -207,6 +208,7 @@ Your answer:
 - **Question submission:** `POST /rooms/{room_id}/question` submits question and immediately returns AI answer
 - **Conversation updates:** Frontend maintains separate `conversationHistory` state, only updated by question submissions and initial load
 - **Security contract:** state response must omit `secret_character`; returned fields are `room_id`, `game_mode`, `players`, `game_phase`, `winner_id`, `created_at`
+- **Current implementation:** `GET /rooms/{room_id}/state` and `GET /rooms/{room_id}/join` now return persisted `phase` and `conversation_history` data from `RoomDB`
 - **Timeout:** Game rooms expire after 30 minutes of inactivity
 
 ### API Request/Response Format

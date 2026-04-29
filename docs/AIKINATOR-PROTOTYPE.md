@@ -1,12 +1,13 @@
 # AI-kinator Prototype v0.1 – Implementation Tasks
 
-**Last Updated:** 2026-04-19  
-**Status:** In Development (9/21 Tasks Completed)
+**Last Updated:** 2026-04-29  
+**Status:** In Development (10/21 Tasks Completed)
 
-### ✅ Completed Tasks (9/21)
+### ✅ Completed Tasks (10/21)
 - **BE-1** (2026-04-08): Backend setup + FastAPI with health check
 - **BE-2** (2026-04-12): Room creation endpoints (solo, duel, battle-royale)
 - **BE-3** (2026-04-18): `GET /rooms/{room_id}/state` returns dummy room state
+- **BE-4** (2026-04-29): RoomDB expanded with persisted phase/player/history state and migrated room-state endpoints
 - **FE-1** (2026-04-13): Frontend initialization + React
 - **FE-2** (2026-04-15): Home screen with game mode selection
 - **DEVOPS-1** (2026-04-19): GitHub Actions CI workflow with backend/frontend tests
@@ -14,8 +15,7 @@
 - **Project Spec** (2026-04-12): Complete specification
 - **TRIVIAL** (2026-04-10): Setup command fixes
 
-### 🔄 In Progress (3/21)
-- **BE-4**: Expand RoomDB model with game phase, player state, conversation history
+### 🔄 In Progress (2/21)
 - **FE-3**: GameRoom component with 3-second polling of room state
 - **LLM-1**: LangChain configuration + OpenAI API environment variables
 
@@ -46,10 +46,11 @@
 ### 🔄 IN PROGRESS
 
 **BE-4: Expand Room model with game phase & player state**
-- Add columns to RoomDB: `phase`, `secret_character`, `players_json`, `history_json`
-- Create Pydantic schema `GameState`
-- Helper function: `get_room_with_state(room_id)`
-- Persist in SQLite
+- Done: added columns to RoomDB: `phase`, `secret_character`, `players_json`, `history_json`
+- Done: created Pydantic schema `GameState`
+- Done: created helper function `get_room_with_state(room_id)`
+- Done: added SQLite migration for older room rows
+- Done: `GET /rooms/{room_id}/state` and `GET /rooms/{room_id}/join` use the persisted room state format
 
 **FE-3: GameRoom component with polling**
 - Routing: `/game/:roomId`
