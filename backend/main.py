@@ -124,6 +124,7 @@ class QuestionRequest(BaseModel):
 class QuestionResponse(BaseModel):
     question_id: str
     answer: Literal["Tak", "Nie", "Nie wiem"]
+    updated_history: list[ConversationEntry]
 
 # --- HELPER FUNCTIONS ---
 def get_room_logic(room_id: str, db: Session):
@@ -142,7 +143,10 @@ def _json_list_value(raw_value, fallback):
     except (TypeError, json.JSONDecodeError):
         return fallback
 
-    return parsed_value if isinstance(parsed_value, list) else fallback
+    if not isinstance(parsed_value, list) or not parsed_value:
+        return fallback
+
+    return parsed_value
 
 
 def get_room_with_state(room_id: str, db: Session) -> GameState:
@@ -239,6 +243,15 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
 
+    # Validate request
+    if not request.question or not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+
+    # Ensure player is part of the room
+    players = _json_list_value(room.players_json, DEFAULT_PLAYERS)
+    if not any(p.get("player_id") == request.player_id for p in players):
+        raise HTTPException(status_code=404, detail="Player not in room")
+
     # TODO: Integrate LangChain for LLM response
     # Example implementation:
     # 1. Fetch room's secret_character from database
@@ -253,7 +266,22 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
     import random
     answer = random.choice(mock_answers)
 
+    # Load and append to history
+    history = _json_list_value(room.history_json, DEFAULT_HISTORY)
+
+    player_entry = {"role": "player", "question": request.question}
+    ai_entry = {"role": "ai", "answer": answer}
+
+    history.append(player_entry)
+    history.append(ai_entry)
+
+    room.history_json = json.dumps(history)
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+
     return {
         "question_id": f"q_{uuid.uuid4()}",
         "answer": answer,
+        "updated_history": history,
     }
