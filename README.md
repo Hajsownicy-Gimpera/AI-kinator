@@ -4,6 +4,28 @@ Zobacz: [AIKINATOR-PROTOTYPE](docs/AIKINATOR-PROTOTYPE.md)
 
 ---
 
+## Running backend tests
+
+If you want to run backend unit tests locally, use the `backend/` directory and install the dev extras first:
+
+```bash
+cd backend
+uv sync --extra dev
+uv run pytest tests -q
+```
+
+If you already have a synced environment and only need to update the test tools, run:
+
+```bash
+cd backend
+uv sync --extra dev
+```
+
+Notes:
+- `uv sync --extra dev` installs the backend runtime dependencies plus `pytest` and `httpx` from `backend/pyproject.toml`.
+- Run tests from inside `backend/` so `uv` uses the local project environment.
+- On success you should see output like `7 passed`.
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -29,6 +51,8 @@ npm run dev
 This will start:
 - **Backend:** `http://localhost:8000` (FastAPI with auto-reload)
 - **Frontend:** `http://localhost:3000` (React development server)
+
+Note: The backend now includes the question endpoint `POST /rooms/{room_id}/question` (BE-5) which returns a dummy LLM answer and persists conversation history. LLM integration will be added in LLM-4.
 
 **Or run individually:**
 
