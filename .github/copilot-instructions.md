@@ -208,7 +208,7 @@ Your answer:
 - **Question submission:** `POST /rooms/{room_id}/question` submits question and immediately returns AI answer
 - **Conversation updates:** Frontend maintains separate `conversationHistory` state, only updated by question submissions and initial load
 - **Security contract:** state response must omit `secret_character`; returned fields are `room_id`, `game_mode`, `players`, `game_phase`, `winner_id`, `created_at`
-- **Current implementation:** `GET /rooms/{room_id}/state` and `GET /rooms/{room_id}/join` now return persisted `phase` and `conversation_history` data from `RoomDB`
+- **Current implementation:** `GET /rooms/{room_id}/state` returns the persisted room state without `conversation_history`, while `GET /rooms/{room_id}/join` includes the full conversation history from `RoomDB`
 - **Timeout:** Game rooms expire after 30 minutes of inactivity
 
 ### API Request/Response Format
