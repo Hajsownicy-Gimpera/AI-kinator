@@ -3,7 +3,7 @@ import logging
 import random
 import uuid
 from datetime import datetime
-
+from typing import Literal
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -58,23 +58,32 @@ class PlayerState(BaseModel):
     has_guessed: bool
     guessed_at: datetime | None
 
-
+    
 class RoomStateResponse(BaseModel):
     room_id: str
     game_mode: str
     game_phase: str
     players: list[PlayerState]
-    conversation_history: list[ConversationEntry]
     winner_id: str | None
     created_at: datetime
 
+class RoomHistoryResponse(RoomStateResponse):
+    conversation_history: list[ConversationEntry]
+
 class QuestionRequest(BaseModel):
+    player_id: str
     question: str
 
-
 class QuestionResponse(BaseModel):
-    answer: str
-    updated_history: list[ConversationEntry]
+    question_id: str
+    answer: Literal["Tak", "Nie", "Nie wiem"]
+
+# --- HELPER FUNCTIONS ---
+def get_room_logic(room_id: str, db: Session):
+    room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return room
 
 
 # --- APLIKACJA ---
@@ -132,12 +141,32 @@ def create_duel_game(db: Session = Depends(get_db)):
 def create_br_game(db: Session = Depends(get_db)):
     return create_room_logic("battle_royale", db)
 
-
 @app.get("/rooms/{room_id}/state", response_model=RoomStateResponse)
-def get_room_state(room_id: str, db: Session = Depends(get_db)):
-    room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
-    if room is None:
-        raise HTTPException(status_code=404, detail="Room not found")
+def get_room_state_polling(room_id: str, db: Session = Depends(get_db)):
+    """Get current game state for polling (no conversation history)."""
+    room = get_room_logic(room_id, db)
+
+    return {
+        "room_id": room.room_id,
+        "game_mode": room.game_mode,
+        "players": [
+            {
+                "player_id": "p1",
+                "username": "Gracz1",
+                "guess_count": 0,
+                "has_guessed": False,
+                "guessed_at": None,
+            },
+        ],
+        "game_phase": "waiting" if room.status == "waiting" else "active",
+        "winner_id": None,
+        "created_at": room.created_at,
+    }
+
+@app.get("/rooms/{room_id}/join", response_model=RoomHistoryResponse)
+def get_room_history(room_id: str, db: Session = Depends(get_db)):
+    """Get full room history including all conversation (initial load only)."""
+    room = get_room_logic(room_id, db)
 
     history = json.loads(room.conversation_history or "[]")
 
@@ -161,11 +190,8 @@ def get_room_state(room_id: str, db: Session = Depends(get_db)):
 
 
 @app.post("/rooms/{room_id}/question", response_model=QuestionResponse)
-def ask_question(
-    room_id: str,
-    request: QuestionRequest,
-    db: Session = Depends(get_db),
-):
+def submit_question(room_id: str, request: QuestionRequest, db: Session = Depends(get_db)):
+    """Submit a question and get AI response (Tak/Nie/Nie wiem)."""
     room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -191,6 +217,6 @@ def ask_question(
     db.commit()
 
     return {
+        "question_id": str(uuid.uuid4()),
         "answer": result["answer"],
-        "updated_history": history,
     }

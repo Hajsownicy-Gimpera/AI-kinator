@@ -1,5 +1,7 @@
 import logging
+import re
 import time
+import unicodedata
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -73,7 +75,9 @@ class LLMChain:
     @staticmethod
     def _validate(raw_response: str) -> str:
         """Validate LLM output. Return 'Nie wiem' as fallback."""
-        cleaned = raw_response.strip().rstrip(".")
+        normalized = unicodedata.normalize("NFC", raw_response)
+        collapsed = re.sub(r"\s+", " ", normalized).strip()
+        cleaned = collapsed.strip(".,!?;:\"'-")
         if cleaned in VALID_ANSWERS:
             return cleaned
         for valid in VALID_ANSWERS:
