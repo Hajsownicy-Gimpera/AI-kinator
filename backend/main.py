@@ -103,18 +103,21 @@ class PlayerState(BaseModel):
     guessed_at: datetime | None
 
 
-class GameState(BaseModel):
+class RoomState(BaseModel):
     room_id: str
     game_mode: str
     phase: Literal["waiting", "active", "ended"]
     players: list[PlayerState]
-    conversation_history: list[ConversationEntry]
     winner_id: str | None
     created_at: datetime
     secret_character: str | None = None
 
     class Config:
         from_attributes = True
+
+
+class GameState(RoomState):
+    conversation_history: list[ConversationEntry]
 
 class QuestionRequest(BaseModel):
     player_id: str
@@ -142,25 +145,37 @@ def _json_list_value(raw_value, fallback):
     except (TypeError, json.JSONDecodeError):
         return fallback
 
-    return parsed_value if isinstance(parsed_value, list) else fallback
+    if not isinstance(parsed_value, list) or not parsed_value:
+        return fallback
+
+    return parsed_value
 
 
-def get_room_with_state(room_id: str, db: Session) -> GameState:
+def get_room_with_state(room_id: str, db: Session) -> RoomState:
     room = get_room_logic(room_id, db)
     room_phase = room.phase or room.status or "waiting"
 
     if room_phase not in {"waiting", "active", "ended"}:
         room_phase = "waiting"
 
-    return GameState(
+    return RoomState(
         room_id=room.room_id,
         game_mode=room.game_mode,
         phase=room_phase,
         players=_json_list_value(room.players_json, DEFAULT_PLAYERS),
-        conversation_history=_json_list_value(room.history_json, DEFAULT_HISTORY),
         winner_id=None,
         created_at=room.created_at,
         secret_character=room.secret_character,
+    )
+
+
+def get_room_with_history(room_id: str, db: Session) -> GameState:
+    room = get_room_logic(room_id, db)
+    room_state = get_room_with_state(room_id, db)
+
+    return GameState(
+        **room_state.model_dump(),
+        conversation_history=_json_list_value(room.history_json, DEFAULT_HISTORY),
     )
 
 
@@ -220,7 +235,7 @@ def create_duel_game(db: Session = Depends(get_db)):
 def create_br_game(db: Session = Depends(get_db)):
     return create_room_logic("battle_royale", db)
 
-@app.get("/rooms/{room_id}/state", response_model=GameState, response_model_exclude={"secret_character"})
+@app.get("/rooms/{room_id}/state", response_model=RoomState, response_model_exclude={"secret_character"})
 def get_room_state_polling(room_id: str, db: Session = Depends(get_db)):
     """Get current game state for polling."""
     return get_room_with_state(room_id, db)
@@ -228,7 +243,7 @@ def get_room_state_polling(room_id: str, db: Session = Depends(get_db)):
 @app.get("/rooms/{room_id}/join", response_model=GameState, response_model_exclude={"secret_character"})
 def get_room_history(room_id: str, db: Session = Depends(get_db)):
     """Get full room history including all conversation (initial load only)."""
-    return get_room_with_state(room_id, db)
+    return get_room_with_history(room_id, db)
 
 
 
