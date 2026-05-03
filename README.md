@@ -54,6 +54,8 @@ This will start:
 
 Note: The backend now includes the question endpoint `POST /rooms/{room_id}/question` (BE-5) which returns a dummy LLM answer and persists conversation history. LLM integration will be added in LLM-4.
 
+Note: The backend now includes the question endpoint `POST /rooms/{room_id}/question` (BE-5) which returns a dummy LLM answer and persists conversation history. LLM integration will be added in LLM-4.
+
 **Or run individually:**
 
 ```bash

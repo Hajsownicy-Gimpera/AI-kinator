@@ -84,6 +84,14 @@ Note: BE-5 has been implemented (dummy LLM). The endpoint now:
 
 Next steps for BE-5 -> LLM integration: replace dummy answer with `LLMChain.get_answer()` (LLM-4).
 
+Note: BE-5 has been implemented (dummy LLM). The endpoint now:
+- validates non-empty questions (400)
+- ensures `player_id` belongs to the room (404)
+- appends both player question and AI answer to `history_json` and persists it
+- returns `updated_history` in the response
+
+Next steps for BE-5 -> LLM integration: replace dummy answer with `LLMChain.get_answer()` (LLM-4).
+
 **FE-4: Question input & guess submission buttons**
 - Connect "Zadaj pytanie" → `POST /rooms/{room_id}/question`
 - Connect "Zgaduję postać" → `POST /rooms/{room_id}/guess`

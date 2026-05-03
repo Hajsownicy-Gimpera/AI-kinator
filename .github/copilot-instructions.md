@@ -2,6 +2,7 @@
 
 **Last Updated:** 2026-04-29  
 **Status:** In Development (12/21 Tasks Completed) – Room state persistence + question endpoint (BE-5 implemented) + optimized data fetching
+**Status:** In Development (12/21 Tasks Completed) – Room state persistence + question endpoint (BE-5 implemented) + optimized data fetching
 
 ## 📊 Current Sprint Status
 
@@ -398,6 +399,11 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 
 // Navigate to game
 navigate(`/room/${roomId}`);
+
+### Recent backend updates
+
+- **BE-5 implemented (2026-04-29):** `POST /rooms/{room_id}/question` now exists in the backend. Current behaviour: returns a dummy answer (`Tak|Nie|Nie wiem`), persists question+answer to `history_json`, and includes validation (empty question -> 400, player not in room -> 404). Tests added: `backend/tests/test_question_endpoint.py`.
+
 
 ### Recent backend updates
 
