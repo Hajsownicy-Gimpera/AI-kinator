@@ -20,11 +20,7 @@ def test_ask_question_returns_valid_answer():
     data = response.json()
     assert data["answer"] in VALID_ANSWERS
     assert "raw_response" not in data
-    assert len(data["updated_history"]) == 2
-    assert data["updated_history"][0]["role"] == "player"
-    assert data["updated_history"][0]["question"] == "Czy ta postac jest fikcyjna?"
-    assert data["updated_history"][1]["role"] == "ai"
-    assert data["updated_history"][1]["answer"] in VALID_ANSWERS
+    assert "question_id" in data
 
 
 def test_ask_question_appends_to_history():
@@ -35,14 +31,14 @@ def test_ask_question_appends_to_history():
         f"/rooms/{room_id}/question",
         json={"question": "Pytanie 1?"},
     )
-    response = client.post(
+    client.post(
         f"/rooms/{room_id}/question",
         json={"question": "Pytanie 2?"},
     )
 
-    data = response.json()
-    assert len(data["updated_history"]) == 4
-    assert data["updated_history"][2]["question"] == "Pytanie 2?"
+    history = client.get(f"/rooms/{room_id}/join").json()["conversation_history"]
+    assert len(history) == 4
+    assert history[2]["question"] == "Pytanie 2?"
 
 
 def test_ask_question_room_not_found():
@@ -84,7 +80,9 @@ def test_room_state_reflects_question_history():
         json={"question": "Czy to czlowiek?"},
     )
 
+    history = client.get(f"/rooms/{room_id}/join").json()["conversation_history"]
+    assert len(history) == 2
+    assert history[0]["question"] == "Czy to czlowiek?"
+
     state = client.get(f"/rooms/{room_id}/state").json()
-    assert len(state["conversation_history"]) == 2
-    assert state["conversation_history"][0]["question"] == "Czy to czlowiek?"
     assert state["game_phase"] == "active"

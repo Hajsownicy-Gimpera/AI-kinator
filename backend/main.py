@@ -71,7 +71,7 @@ class RoomHistoryResponse(RoomStateResponse):
     conversation_history: list[ConversationEntry]
 
 class QuestionRequest(BaseModel):
-    player_id: str
+    player_id: str | None = None
     question: str
 
 class QuestionResponse(BaseModel):

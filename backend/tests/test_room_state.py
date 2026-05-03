@@ -22,7 +22,6 @@ def test_get_room_state_returns_state_for_existing_room():
     assert len(payload["players"]) == 1
     assert payload["players"][0]["has_guessed"] is False
     assert payload["players"][0]["guessed_at"] is None
-    assert payload["conversation_history"] == []
     assert payload["winner_id"] is None
     assert isinstance(payload["created_at"], str)
 
