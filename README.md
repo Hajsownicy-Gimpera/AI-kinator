@@ -24,14 +24,14 @@ uv sync --extra dev
 Notes:
 - `uv sync --extra dev` installs the backend runtime dependencies plus `pytest` and `httpx` from `backend/pyproject.toml`.
 - Run tests from inside `backend/` so `uv` uses the local project environment.
-- On success you should see output like `7 passed`.
+- On success you should see output like `8 passed`.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - **Node.js** (v18+)
-- **Python** (v3.14+)
+- **Python** (v3.9+)
 - **UV** package manager (automatically installed, or install manually: `pip3 install uv` or install from https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Installation & Running

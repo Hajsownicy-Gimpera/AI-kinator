@@ -1,14 +1,14 @@
 # AI-kinator Prototype v0.1 – Implementation Tasks
 
 **Last Updated:** 2026-04-29  
-**Status:** In Development (11/21 Tasks Completed)
+**Status:** In Development (12/21 Tasks Completed)
 
-### ✅ Completed Tasks (11/21)
+### ✅ Completed Tasks (12/21)
 - **BE-1** (2026-04-08): Backend setup + FastAPI with health check
 - **BE-2** (2026-04-12): Room creation endpoints (solo, duel, battle-royale)
 - **BE-3** (2026-04-18): `GET /rooms/{room_id}/state` returns dummy room state
 - **BE-4** (2026-04-29): RoomDB expanded with persisted phase/player/history state and migrated room-state endpoints
- - **BE-5** (2026-04-29): `POST /rooms/{room_id}/question` implemented (dummy LLM, persists history, tests added)
+- **BE-5** (2026-04-29): `POST /rooms/{room_id}/question` implemented (dummy LLM, persists history, tests added)
 - **FE-1** (2026-04-13): Frontend initialization + React
 - **FE-2** (2026-04-15): Home screen with game mode selection
 - **DEVOPS-1** (2026-04-19): GitHub Actions CI workflow with backend/frontend tests
@@ -20,8 +20,7 @@
 - **FE-3**: GameRoom component with 3-second polling of room state
 - **LLM-1**: LangChain configuration + OpenAI API environment variables
 
-### ⏳ Backlog (8/21)
- - **BE-5**: (implemented) `POST /rooms/{room_id}/question` with dummy LLM — next: LLM integration (LLM-4)
+### ⏳ Backlog (7/21)
 - **FE-4**: Question input & guess submission buttons
 - **LLM-2**: System prompts for AI-kinator (Polish, three-answer constraint)
 - **LLM-3**: LLMChain wrapper class with output validation
@@ -158,5 +157,5 @@ Next steps for BE-5 -> LLM integration: replace dummy answer with `LLMChain.get_
 
 1. **Development Guide:** See `.github/copilot-instructions.md` for build commands and architecture
 2. **Project Overview:** See `README.md` for quickstart and current sprint status
-3. **Task Tracking:** All tasks tracked in `kanbantasks.md` (team's single source of truth)
+3. **Task Tracking:** All tasks listed above; full details in `.github/copilot-instructions.md`
 
