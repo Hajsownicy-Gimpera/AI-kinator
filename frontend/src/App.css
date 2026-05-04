@@ -60,3 +60,33 @@ pre {
   text-align: left;
   font-size: 0.8em;
 }
+
+.button-container {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.mode-button {
+  background-color: #700ff7;
+  color: #f9f4ff;
+  border: none;
+  padding: 20px 40px;
+  font-size: 1.3rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mode-button:hover:not(:disabled) {
+  background-color: #9034f1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mode-button:disabled {
+  background-color: #555;
+  color: #888;
+  cursor: not-allowed;
+}
