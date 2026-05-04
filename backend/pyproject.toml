@@ -26,4 +26,4 @@ packages = ["."]
 only-packages = false
 
 [tool.uv]
-required-version = "0.11.7"
+required-version = ">=0.11.7"
