@@ -12,6 +12,7 @@ const GameView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [question, setQuestion] = useState('');
+  const [guess, setGuess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -121,6 +122,44 @@ const GameView = () => {
     }
   };
 
+  const handleGuess = async (e) => {
+    e.preventDefault();
+
+    if (!question.trim()) {
+      setError('Próba odgadnięcia nie może być pusta');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError(null);
+      const response = await fetch(`${API_URL}/rooms/${roomId}/guess`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        player_id: 'player_1',
+        guess: guess.trim(),
+        }),
+      });
+
+      if (response.status === 404) {
+        console.warn("Endpoint /guess not implemented yet (404)");
+        return;
+      }
+
+      if (!response.ok) throw new Error(`Błąd: ${response.statusText}`);
+
+      fetchRoomState();
+      setGuess('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
+
   if (loading) {
     return (
       <div className="game-view">
@@ -208,24 +247,36 @@ const GameView = () => {
           </div>
 
           {/* Input area */}
-          <form onSubmit={handleSubmitQuestion} className="chat-input-area">
+          <form onSubmit={(e) => e.preventDefault()} className="chat-input-area">
             <input
               type="text"
               className="question-input"
-              placeholder="Zadaj pytanie tak/nie..."
+              placeholder="Zadaj pytanie tak/nie lub odgadnij postać..."
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               disabled={submitting}
               maxLength={200}
             />
+            {/* Question submit button */}
             <button
               type="submit"
               className="send-button"
+              onClick={handleSubmitQuestion}
               disabled={submitting || !question.trim()}
             >
-              {submitting ? '⏳' : '📤'} Wyślij
+              {submitting ? '⏳' : '📤'} Pytam
+            </button>
+            {/* Guess submit button */}
+            <button 
+              type="submit" 
+              className="send-button" 
+              onClick={handleGuess}
+              disabled={submitting || !question.trim()}
+            >
+              {submitting ? '⏳' : '🤔'} Zgaduję
             </button>
           </form>
+
         </div>
       </div>
     </div>
