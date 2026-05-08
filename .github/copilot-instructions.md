@@ -1,7 +1,8 @@
 # Copilot Development Guide – AI-kinator
 
-**Last Updated:** 2026-04-25  
-**Status:** In Development (11/21 Tasks Completed) – Question endpoint + optimized data fetching
+**Last Updated:** 2026-04-29  
+**Status:** In Development (12/21 Tasks Completed) – Room state persistence + question endpoint (BE-5 implemented) + optimized data fetching
+**Status:** In Development (12/21 Tasks Completed) – Room state persistence + question endpoint (BE-5 implemented) + optimized data fetching
 
 ## 📊 Current Sprint Status
 
@@ -129,6 +130,7 @@ npm run format
 - `GameSession` – Tracks solo game: secret character, conversation history, guess count
 - `GameRoom` – Tracks multiplayer game: players, shared secret, per-player guesses, ranked leaderboard
 - `LLMChain` – Wrapped LLM interface ensuring responses are `Tak`, `Nie`, or `Nie wiem`
+- `RoomDB` – Persistent room state columns for `phase`, `secret_character`, `players_json`, and `history_json`
 
 **Frontend Structure:**
 - `GameContext` – Global game state (current room, player info, game phase)
@@ -207,6 +209,7 @@ Your answer:
 - **Question submission:** `POST /rooms/{room_id}/question` submits question and immediately returns AI answer
 - **Conversation updates:** Frontend maintains separate `conversationHistory` state, only updated by question submissions and initial load
 - **Security contract:** state response must omit `secret_character`; returned fields are `room_id`, `game_mode`, `players`, `game_phase`, `winner_id`, `created_at`
+- **Current implementation:** `GET /rooms/{room_id}/state` returns the persisted room state without `conversation_history`, while `GET /rooms/{room_id}/join` includes the full conversation history from `RoomDB`
 - **Timeout:** Game rooms expire after 30 minutes of inactivity
 
 ### API Request/Response Format
@@ -396,6 +399,16 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 
 // Navigate to game
 navigate(`/room/${roomId}`);
+
+### Recent backend updates
+
+- **BE-5 implemented (2026-04-29):** `POST /rooms/{room_id}/question` now exists in the backend. Current behaviour: returns a dummy answer (`Tak|Nie|Nie wiem`), persists question+answer to `history_json`, and includes validation (empty question -> 400, player not in room -> 404). Tests added: `backend/tests/test_question_endpoint.py`.
+
+
+### Recent backend updates
+
+- **BE-5 implemented (2026-04-29):** `POST /rooms/{room_id}/question` now exists in the backend. Current behaviour: returns a dummy answer (`Tak|Nie|Nie wiem`), persists question+answer to `history_json`, and includes validation (empty question -> 400, player not in room -> 404). Tests added: `backend/tests/test_question_endpoint.py`.
+
 ```
 
 ---
