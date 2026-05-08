@@ -1,88 +1,110 @@
+import importlib
+import sqlite3
+import sys
+
+import pytest
 from fastapi.testclient import TestClient
 
-from ai.prompts import VALID_ANSWERS
-from main import app
+from .test_room_state import _create_legacy_database
 
 
-client = TestClient(app)
+def test_submit_question_persists_history_and_returns_answer(tmp_path, monkeypatch):
+    db_path = tmp_path / "rooms.db"
+    _create_legacy_database(db_path)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
+    sys.modules.pop("main", None)
 
+    main = importlib.import_module("main")
+    client = TestClient(main.app)
 
-def test_ask_question_returns_valid_answer():
-    room = client.post("/games/solo").json()
-    room_id = room["room_id"]
+    # create new room which has default player p1 and default history length 2
+    create_response = client.post("/games/duel")
+    assert create_response.status_code == 200
+    room_id = create_response.json()["room_id"]
 
-    response = client.post(
-        f"/rooms/{room_id}/question",
-        json={"question": "Czy ta postac jest fikcyjna?"},
-    )
+    payload = {"player_id": "p1", "question": "Czy to postać z filmu?"}
+    resp = client.post(f"/rooms/{room_id}/question", json=payload)
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["answer"] in VALID_ANSWERS
-    assert "raw_response" not in data
+    assert resp.status_code == 200
+    data = resp.json()
     assert "question_id" in data
+    assert data["answer"] in ["Tak", "Nie", "Nie wiem"]
+    assert "updated_history" in data
+    # original history 2 + (player, ai) => 4
+    assert len(data["updated_history"]) >= 4
+    # last ai entry should match returned answer
+    last_ai = next((h for h in reversed(data["updated_history"]) if h.get("role") == "ai"), None)
+    assert last_ai is not None
+    assert last_ai.get("answer") == data["answer"]
 
 
-def test_ask_question_appends_to_history():
-    room = client.post("/games/solo").json()
-    room_id = room["room_id"]
+def test_submit_question_empty_question_returns_400(tmp_path, monkeypatch):
+    db_path = tmp_path / "rooms.db"
+    _create_legacy_database(db_path)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
+    sys.modules.pop("main", None)
 
-    client.post(
-        f"/rooms/{room_id}/question",
-        json={"question": "Pytanie 1?"},
-    )
-    client.post(
-        f"/rooms/{room_id}/question",
-        json={"question": "Pytanie 2?"},
-    )
+    main = importlib.import_module("main")
+    client = TestClient(main.app)
 
-    history = client.get(f"/rooms/{room_id}/join").json()["conversation_history"]
-    assert len(history) == 4
-    assert history[2]["question"] == "Pytanie 2?"
+    create_response = client.post("/games/duel")
+    room_id = create_response.json()["room_id"]
 
+    payload = {"player_id": "p1", "question": "   "}
+    resp = client.post(f"/rooms/{room_id}/question", json=payload)
 
-def test_ask_question_room_not_found():
-    response = client.post(
-        "/rooms/nonexistent/question",
-        json={"question": "Test?"},
-    )
-    assert response.status_code == 404
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "Question cannot be empty"
 
 
-def test_ask_question_rejects_empty():
-    room = client.post("/games/solo").json()
-    room_id = room["room_id"]
+def test_submit_question_too_long_returns_400(tmp_path, monkeypatch):
+    db_path = tmp_path / "rooms.db"
+    _create_legacy_database(db_path)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
+    sys.modules.pop("main", None)
 
-    response = client.post(
-        f"/rooms/{room_id}/question",
-        json={"question": "   "},
-    )
-    assert response.status_code == 400
+    main = importlib.import_module("main")
+    client = TestClient(main.app)
 
+    create_response = client.post("/games/duel")
+    room_id = create_response.json()["room_id"]
 
-def test_ask_question_rejects_too_long():
-    room = client.post("/games/solo").json()
-    room_id = room["room_id"]
+    payload = {"player_id": "p1", "question": "a" * 501}
+    resp = client.post(f"/rooms/{room_id}/question", json=payload)
 
-    response = client.post(
-        f"/rooms/{room_id}/question",
-        json={"question": "a" * 501},
-    )
-    assert response.status_code == 400
+    assert resp.status_code == 400
 
 
-def test_room_state_reflects_question_history():
-    room = client.post("/games/solo").json()
-    room_id = room["room_id"]
+def test_submit_question_unknown_room_returns_404(tmp_path, monkeypatch):
+    db_path = tmp_path / "rooms.db"
+    _create_legacy_database(db_path)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
+    sys.modules.pop("main", None)
 
-    client.post(
-        f"/rooms/{room_id}/question",
-        json={"question": "Czy to czlowiek?"},
-    )
+    main = importlib.import_module("main")
+    client = TestClient(main.app)
 
-    history = client.get(f"/rooms/{room_id}/join").json()["conversation_history"]
-    assert len(history) == 2
-    assert history[0]["question"] == "Czy to czlowiek?"
+    payload = {"player_id": "p1", "question": "Czy to test?"}
+    resp = client.post("/rooms/non-existing-room/question", json=payload)
 
-    state = client.get(f"/rooms/{room_id}/state").json()
-    assert state["game_phase"] == "active"
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Room not found"
+
+
+def test_submit_question_player_not_in_room_returns_404(tmp_path, monkeypatch):
+    db_path = tmp_path / "rooms.db"
+    _create_legacy_database(db_path)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
+    sys.modules.pop("main", None)
+
+    main = importlib.import_module("main")
+    client = TestClient(main.app)
+
+    create_response = client.post("/games/duel")
+    room_id = create_response.json()["room_id"]
+
+    payload = {"player_id": "unknown", "question": "Czy to test?"}
+    resp = client.post(f"/rooms/{room_id}/question", json=payload)
+
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Player not in room"

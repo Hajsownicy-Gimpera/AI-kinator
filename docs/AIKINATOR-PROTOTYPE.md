@@ -1,12 +1,14 @@
 # AI-kinator Prototype v0.1 – Implementation Tasks
 
-**Last Updated:** 2026-04-19  
-**Status:** In Development (9/21 Tasks Completed)
+**Last Updated:** 2026-04-29  
+**Status:** In Development (12/21 Tasks Completed)
 
-### ✅ Completed Tasks (9/21)
+### ✅ Completed Tasks (12/21)
 - **BE-1** (2026-04-08): Backend setup + FastAPI with health check
 - **BE-2** (2026-04-12): Room creation endpoints (solo, duel, battle-royale)
 - **BE-3** (2026-04-18): `GET /rooms/{room_id}/state` returns dummy room state
+- **BE-4** (2026-04-29): RoomDB expanded with persisted phase/player/history state and migrated room-state endpoints
+- **BE-5** (2026-04-29): `POST /rooms/{room_id}/question` implemented (dummy LLM, persists history, tests added)
 - **FE-1** (2026-04-13): Frontend initialization + React
 - **FE-2** (2026-04-15): Home screen with game mode selection
 - **DEVOPS-1** (2026-04-19): GitHub Actions CI workflow with backend/frontend tests
@@ -14,13 +16,11 @@
 - **Project Spec** (2026-04-12): Complete specification
 - **TRIVIAL** (2026-04-10): Setup command fixes
 
-### 🔄 In Progress (3/21)
-- **BE-4**: Expand RoomDB model with game phase, player state, conversation history
+### 🔄 In Progress (2/21)
 - **FE-3**: GameRoom component with 3-second polling of room state
 - **LLM-1**: LangChain configuration + OpenAI API environment variables
 
-### ⏳ Backlog (9/21)
-- **BE-5**: `POST /rooms/{room_id}/question` with LLM integration
+### ⏳ Backlog (7/21)
 - **FE-4**: Question input & guess submission buttons
 - **LLM-2**: System prompts for AI-kinator (Polish, three-answer constraint)
 - **LLM-3**: LLMChain wrapper class with output validation
@@ -46,10 +46,11 @@
 ### 🔄 IN PROGRESS
 
 **BE-4: Expand Room model with game phase & player state**
-- Add columns to RoomDB: `phase`, `secret_character`, `players_json`, `history_json`
-- Create Pydantic schema `GameState`
-- Helper function: `get_room_with_state(room_id)`
-- Persist in SQLite
+- Done: added columns to RoomDB: `phase`, `secret_character`, `players_json`, `history_json`
+- Done: created Pydantic schema `GameState`
+- Done: created helper function `get_room_with_state(room_id)`
+- Done: added SQLite migration for older room rows
+- Done: `GET /rooms/{room_id}/state` and `GET /rooms/{room_id}/join` use the persisted room state format
 
 **FE-3: GameRoom component with polling**
 - Routing: `/game/:roomId`
@@ -74,6 +75,22 @@
 - Response: `{"answer": "Tak|Nie|Nie wiem", "updated_history": [...]}`
 - Dummy logic: random answer from 3 options
 - Store in room history
+
+Note: BE-5 has been implemented (dummy LLM). The endpoint now:
+- validates non-empty questions (400)
+- ensures `player_id` belongs to the room (404)
+- appends both player question and AI answer to `history_json` and persists it
+- returns `updated_history` in the response
+
+Next steps for BE-5 -> LLM integration: replace dummy answer with `LLMChain.get_answer()` (LLM-4).
+
+Note: BE-5 has been implemented (dummy LLM). The endpoint now:
+- validates non-empty questions (400)
+- ensures `player_id` belongs to the room (404)
+- appends both player question and AI answer to `history_json` and persists it
+- returns `updated_history` in the response
+
+Next steps for BE-5 -> LLM integration: replace dummy answer with `LLMChain.get_answer()` (LLM-4).
 
 **FE-4: Question input & guess submission buttons**
 - Connect "Zadaj pytanie" → `POST /rooms/{room_id}/question`
@@ -148,5 +165,5 @@
 
 1. **Development Guide:** See `.github/copilot-instructions.md` for build commands and architecture
 2. **Project Overview:** See `README.md` for quickstart and current sprint status
-3. **Task Tracking:** All tasks tracked in `kanbantasks.md` (team's single source of truth)
+3. **Task Tracking:** All tasks listed above; full details in `.github/copilot-instructions.md`
 

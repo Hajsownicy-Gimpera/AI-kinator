@@ -1,15 +1,17 @@
 import json
 import logging
+import os
 import random
 import uuid
 from datetime import datetime
 from typing import Literal
-from fastapi import FastAPI, Depends, HTTPException
+
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, String, DateTime, Text
+from sqlalchemy import Column, DateTime, String, Text, create_engine, inspect
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from ai.llm_chain import LLMChain
 from ai.prompts import EXAMPLE_CHARACTERS
@@ -17,10 +19,32 @@ from ai.prompts import EXAMPLE_CHARACTERS
 logger = logging.getLogger(__name__)
 
 # --- KONFIGURACJA BAZY DANYCH ---
-SQLALCHEMY_DATABASE_URL = "sqlite:///./akinator.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./akinator.db")
+ENGINE_CONNECT_ARGS = {"check_same_thread": False} if SQLALCHEMY_DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=ENGINE_CONNECT_ARGS)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+DEFAULT_PLAYERS = [
+    {
+        "player_id": "p1",
+        "username": "Gracz1",
+        "guess_count": 0,
+        "has_guessed": False,
+        "guessed_at": None,
+    }
+]
+
+DEFAULT_HISTORY = [
+    {
+        "role": "player",
+        "question": "Czy ta postac jest prawdziwa?",
+    },
+    {
+        "role": "ai",
+        "answer": "Tak",
+    },
+]
 
 # Model bazy danych
 class RoomDB(Base):
@@ -28,12 +52,39 @@ class RoomDB(Base):
     room_id = Column(String, primary_key=True, index=True)
     game_mode = Column(String)
     status = Column(String, default="waiting")
-    secret_character = Column(String, nullable=False)
-    conversation_history = Column(Text, default="[]")
+    phase = Column(String, default="waiting", nullable=False)
+    secret_character = Column(String, nullable=True)
+    players_json = Column(String, default="[]", nullable=False)
+    history_json = Column(String, default="[]", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 # Utworzenie tabel
 Base.metadata.create_all(bind=engine)
+
+
+def ensure_room_state_columns():
+    with engine.begin() as connection:
+        inspector = inspect(connection)
+
+        if "rooms" not in inspector.get_table_names():
+            return
+
+        existing_columns = {column["name"] for column in inspector.get_columns("rooms")}
+        column_definitions = {
+            "phase": "VARCHAR NOT NULL DEFAULT 'waiting'",
+            "secret_character": "VARCHAR",
+            "players_json": "VARCHAR NOT NULL DEFAULT '[]'",
+            "history_json": "VARCHAR NOT NULL DEFAULT '[]'",
+        }
+
+        for column_name, column_definition in column_definitions.items():
+            if column_name not in existing_columns:
+                connection.exec_driver_sql(
+                    f"ALTER TABLE rooms ADD COLUMN {column_name} {column_definition}"
+                )
+
+
+ensure_room_state_columns()
 
 # --- MODELE PYDANTIC ---
 class RoomResponse(BaseModel):
@@ -58,25 +109,34 @@ class PlayerState(BaseModel):
     has_guessed: bool
     guessed_at: datetime | None
 
-    
-class RoomStateResponse(BaseModel):
+
+class RoomState(BaseModel):
     room_id: str
     game_mode: str
-    game_phase: str
+    phase: Literal["waiting", "active", "ended"]
     players: list[PlayerState]
     winner_id: str | None
     created_at: datetime
+    secret_character: str | None = None
 
-class RoomHistoryResponse(RoomStateResponse):
+    class Config:
+        from_attributes = True
+
+
+class GameState(RoomState):
     conversation_history: list[ConversationEntry]
 
+
 class QuestionRequest(BaseModel):
-    player_id: str | None = None
+    player_id: str
     question: str
+
 
 class QuestionResponse(BaseModel):
     question_id: str
     answer: Literal["Tak", "Nie", "Nie wiem"]
+    updated_history: list[ConversationEntry]
+
 
 # --- HELPER FUNCTIONS ---
 def get_room_logic(room_id: str, db: Session):
@@ -84,6 +144,49 @@ def get_room_logic(room_id: str, db: Session):
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
     return room
+
+
+def _json_list_value(raw_value, fallback):
+    if not raw_value:
+        return fallback
+
+    try:
+        parsed_value = json.loads(raw_value)
+    except (TypeError, json.JSONDecodeError):
+        return fallback
+
+    if not isinstance(parsed_value, list) or not parsed_value:
+        return fallback
+
+    return parsed_value
+
+
+def get_room_with_state(room_id: str, db: Session) -> RoomState:
+    room = get_room_logic(room_id, db)
+    room_phase = room.phase or room.status or "waiting"
+
+    if room_phase not in {"waiting", "active", "ended"}:
+        room_phase = "waiting"
+
+    return RoomState(
+        room_id=room.room_id,
+        game_mode=room.game_mode,
+        phase=room_phase,
+        players=_json_list_value(room.players_json, DEFAULT_PLAYERS),
+        winner_id=None,
+        created_at=room.created_at,
+        secret_character=room.secret_character,
+    )
+
+
+def get_room_with_history(room_id: str, db: Session) -> GameState:
+    room = get_room_logic(room_id, db)
+    room_state = get_room_with_state(room_id, db)
+
+    return GameState(
+        **room_state.model_dump(),
+        conversation_history=_json_list_value(room.history_json, DEFAULT_HISTORY),
+    )
 
 
 # --- APLIKACJA ---
@@ -121,8 +224,10 @@ def create_room_logic(mode: str, db: Session):
         room_id=str(uuid.uuid4()),
         game_mode=mode,
         status="waiting",
+        phase="waiting",
         secret_character=random.choice(EXAMPLE_CHARACTERS),
-        conversation_history="[]",
+        players_json=json.dumps(DEFAULT_PLAYERS),
+        history_json=json.dumps(DEFAULT_HISTORY),
     )
     db.add(new_room)
     db.commit()
@@ -141,52 +246,15 @@ def create_duel_game(db: Session = Depends(get_db)):
 def create_br_game(db: Session = Depends(get_db)):
     return create_room_logic("battle_royale", db)
 
-@app.get("/rooms/{room_id}/state", response_model=RoomStateResponse)
+@app.get("/rooms/{room_id}/state", response_model=RoomState, response_model_exclude={"secret_character"})
 def get_room_state_polling(room_id: str, db: Session = Depends(get_db)):
     """Get current game state for polling (no conversation history)."""
-    room = get_room_logic(room_id, db)
+    return get_room_with_state(room_id, db)
 
-    return {
-        "room_id": room.room_id,
-        "game_mode": room.game_mode,
-        "players": [
-            {
-                "player_id": "p1",
-                "username": "Gracz1",
-                "guess_count": 0,
-                "has_guessed": False,
-                "guessed_at": None,
-            },
-        ],
-        "game_phase": "waiting" if room.status == "waiting" else "active",
-        "winner_id": None,
-        "created_at": room.created_at,
-    }
-
-@app.get("/rooms/{room_id}/join", response_model=RoomHistoryResponse)
+@app.get("/rooms/{room_id}/join", response_model=GameState, response_model_exclude={"secret_character"})
 def get_room_history(room_id: str, db: Session = Depends(get_db)):
     """Get full room history including all conversation (initial load only)."""
-    room = get_room_logic(room_id, db)
-
-    history = json.loads(room.conversation_history or "[]")
-
-    return {
-        "room_id": room.room_id,
-        "game_mode": room.game_mode,
-        "players": [
-            {
-                "player_id": "p1",
-                "username": "Gracz1",
-                "guess_count": 0,
-                "has_guessed": False,
-                "guessed_at": None,
-            },
-        ],
-        "conversation_history": history,
-        "game_phase": "waiting" if room.status == "waiting" else "active",
-        "winner_id": None,
-        "created_at": room.created_at,
-    }
+    return get_room_with_history(room_id, db)
 
 
 @app.post("/rooms/{room_id}/question", response_model=QuestionResponse)
@@ -197,10 +265,17 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
         raise HTTPException(status_code=404, detail="Room not found")
 
     question = request.question.strip()
-    if not question or len(question) > 500:
+    if not question:
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+    if len(question) > 500:
         raise HTTPException(status_code=400, detail="Question must be between 1 and 500 characters")
 
-    history = json.loads(room.conversation_history or "[]")
+    # Ensure player is part of the room
+    players = _json_list_value(room.players_json, DEFAULT_PLAYERS)
+    if not any(p.get("player_id") == request.player_id for p in players):
+        raise HTTPException(status_code=404, detail="Player not in room")
+
+    history = _json_list_value(room.history_json, DEFAULT_HISTORY)
 
     chain = LLMChain(character_name=room.secret_character)
     try:
@@ -212,11 +287,15 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
     history.append({"role": "player", "question": question})
     history.append({"role": "ai", "answer": result["answer"]})
 
-    room.conversation_history = json.dumps(history, ensure_ascii=False)
+    room.history_json = json.dumps(history, ensure_ascii=False)
+    room.phase = "active"
     room.status = "active"
+    db.add(room)
     db.commit()
+    db.refresh(room)
 
     return {
         "question_id": str(uuid.uuid4()),
         "answer": result["answer"],
+        "updated_history": history,
     }

@@ -23,6 +23,8 @@ Testuje kod Pythona w folderze `/backend`:
 - ✅ **flake8** – linting (Syntax errors check)
 - ✅ **mypy** – type checking (opcjonalny warning)
 - ✅ **pytest** – uruchomienie testów z `backend/tests/`
+  
+Note: Backend tests include migration checks and the new BE-5 endpoint tests (`backend/tests/test_question_endpoint.py`).
 
 **Status:** Jeśli jest błąd syntax – job fails (❌)
 
