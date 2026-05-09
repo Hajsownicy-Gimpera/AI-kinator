@@ -277,7 +277,16 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
 
     history = _json_list_value(room.history_json, DEFAULT_HISTORY)
 
-    chain = LLMChain(character_name=room.secret_character)
+    secret_character = (room.secret_character or "").strip()
+    if not secret_character:
+        secret_character = random.choice(EXAMPLE_CHARACTERS)
+        room.secret_character = secret_character
+        logger.warning(
+            "Room %s had no secret_character; assigned fallback character for legacy/migrated room",
+            room_id,
+        )
+
+    chain = LLMChain(character_name=secret_character)
     try:
         result = chain.get_answer(question, history)
     except Exception:
