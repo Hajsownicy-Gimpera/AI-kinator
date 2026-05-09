@@ -4,28 +4,6 @@ Zobacz: [AIKINATOR-PROTOTYPE](docs/AIKINATOR-PROTOTYPE.md)
 
 ---
 
-## Running backend tests
-
-If you want to run backend unit tests locally, use the `backend/` directory and install the dev extras first:
-
-```bash
-cd backend
-uv sync --extra dev
-uv run pytest tests -q
-```
-
-If you already have a synced environment and only need to update the test tools, run:
-
-```bash
-cd backend
-uv sync --extra dev
-```
-
-Notes:
-- `uv sync --extra dev` installs the backend runtime dependencies plus `pytest` and `httpx` from `backend/pyproject.toml`.
-- Run tests from inside `backend/` so `uv` uses the local project environment.
-- On success you should see output like `8 passed`.
-
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -52,10 +30,6 @@ This will start:
 - **Backend:** `http://localhost:8000` (FastAPI with auto-reload)
 - **Frontend:** `http://localhost:3000` (React development server)
 
-Note: The backend now includes the question endpoint `POST /rooms/{room_id}/question` (BE-5) which returns a dummy LLM answer and persists conversation history. LLM integration will be added in LLM-4.
-
-Note: The backend now includes the question endpoint `POST /rooms/{room_id}/question` (BE-5) which returns a dummy LLM answer and persists conversation history. LLM integration will be added in LLM-4.
-
 **Or run individually:**
 
 ```bash
@@ -75,26 +49,31 @@ npm run frontend
 ```
 ai-kinator/
 ├── backend/
-│   ├── main.py                 # FastAPI app with endpoints
-│   ├── pyproject.toml          # Python project config
+│   ├── main.py                 # FastAPI app – endpoints, Pydantic models, DB setup
+│   ├── pyproject.toml          # Python project config (uv)
 │   ├── requirements.txt        # Python dependencies
-│   ├── tests/
-│   │   └── test_room_state.py # Room state tests
-│   └── .gitignore
+│   ├── .env.example            # Env var template (GOOGLE_API_KEY)
+│   ├── ai/
+│   │   ├── config.py           # LLM model config
+│   │   ├── llm_chain.py        # LangChain + Gemini wrapper, dummy mode
+│   │   └── prompts.py          # System prompt, example characters
+│   └── tests/
+│       ├── test_room_state.py
+│       ├── test_llm_chain.py
+│       └── test_question_endpoint.py
 ├── frontend/
 │   ├── package.json            # React app configuration
 │   ├── public/
 │   │   └── index.html
-│   ├── src/
-│   │   ├── App.js              # Main component
-│   │   ├── App.css
-│   │   ├── index.js
-│   │   ├── index.css
-│   │   └── pages/
-│   │       └── GameView/       # Game room component
-│   │           ├── GameView.js # Room state polling, chat, input
-│   │           └── GameView.css
-│   └── .gitignore
+│   └── src/
+│       ├── App.js              # Main component + routing
+│       ├── App.css
+│       ├── index.js
+│       ├── index.css
+│       └── pages/
+│           └── GameView/       # Game room component
+│               ├── GameView.js # Room state polling, chat, input
+│               └── GameView.css
 ├── docs/
 │   └── AIKINATOR-PROTOTYPE.md  # Implementation tasks
 ├── .github/

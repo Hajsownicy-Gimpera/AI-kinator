@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import random
 import uuid
 from datetime import datetime
 from typing import Literal
@@ -10,6 +12,11 @@ from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, String, create_engine, inspect
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
+
+from ai.llm_chain import LLMChain
+from ai.prompts import EXAMPLE_CHARACTERS
+
+logger = logging.getLogger(__name__)
 
 # --- KONFIGURACJA BAZY DANYCH ---
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./akinator.db")
@@ -119,6 +126,7 @@ class RoomState(BaseModel):
 class GameState(RoomState):
     conversation_history: list[ConversationEntry]
 
+
 class QuestionRequest(BaseModel):
     player_id: str
     question: str
@@ -128,6 +136,7 @@ class QuestionResponse(BaseModel):
     question_id: str
     answer: Literal["Tak", "Nie", "Nie wiem"]
     updated_history: list[ConversationEntry]
+
 
 # --- HELPER FUNCTIONS ---
 def get_room_logic(room_id: str, db: Session):
@@ -216,6 +225,7 @@ def create_room_logic(mode: str, db: Session):
         game_mode=mode,
         status="waiting",
         phase="waiting",
+        secret_character=random.choice(EXAMPLE_CHARACTERS),
         players_json=json.dumps(DEFAULT_PLAYERS),
         history_json=json.dumps(DEFAULT_HISTORY),
     )
@@ -238,14 +248,13 @@ def create_br_game(db: Session = Depends(get_db)):
 
 @app.get("/rooms/{room_id}/state", response_model=RoomState, response_model_exclude={"secret_character"})
 def get_room_state_polling(room_id: str, db: Session = Depends(get_db)):
-    """Get current game state for polling."""
+    """Get current game state for polling (no conversation history)."""
     return get_room_with_state(room_id, db)
 
 @app.get("/rooms/{room_id}/join", response_model=GameState, response_model_exclude={"secret_character"})
 def get_room_history(room_id: str, db: Session = Depends(get_db)):
     """Get full room history including all conversation (initial load only)."""
     return get_room_with_history(room_id, db)
-
 
 
 @app.post("/rooms/{room_id}/question", response_model=QuestionResponse)
@@ -255,45 +264,47 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    # Validate request
-    if not request.question or not request.question.strip():
+    question = request.question.strip()
+    if not question:
         raise HTTPException(status_code=400, detail="Question cannot be empty")
+    if len(question) > 500:
+        raise HTTPException(status_code=400, detail="Question must be between 1 and 500 characters")
 
     # Ensure player is part of the room
     players = _json_list_value(room.players_json, DEFAULT_PLAYERS)
     if not any(p.get("player_id") == request.player_id for p in players):
         raise HTTPException(status_code=404, detail="Player not in room")
 
-    # TODO: Integrate LangChain for LLM response
-    # Example implementation:
-    # 1. Fetch room's secret_character from database
-    # 2. Get conversation history from database
-    # 3. Call LLM with system prompt: "You are Akinator's mind. Secret character: {secret}. Conversation: {history}. Answer: {question}"
-    # 4. Parse response to ensure it's only "Tak", "Nie", or "Nie wiem"
-    # 5. Save question and answer to database
-    # 6. Return response
-
-    # Mock implementation for now
-    mock_answers = ["Tak", "Nie", "Nie wiem"]
-    import random
-    answer = random.choice(mock_answers)
-
-    # Load and append to history
     history = _json_list_value(room.history_json, DEFAULT_HISTORY)
 
-    player_entry = {"role": "player", "question": request.question}
-    ai_entry = {"role": "ai", "answer": answer}
+    secret_character = (room.secret_character or "").strip()
+    if not secret_character:
+        secret_character = random.choice(EXAMPLE_CHARACTERS)
+        room.secret_character = secret_character
+        logger.warning(
+            "Room %s had no secret_character; assigned fallback character for legacy/migrated room",
+            room_id,
+        )
 
-    history.append(player_entry)
-    history.append(ai_entry)
+    chain = LLMChain(character_name=secret_character)
+    try:
+        result = chain.get_answer(question, history)
+    except Exception:
+        logger.exception("LLM timeout / error for room %s", room_id)
+        result = {"answer": "Nie wiem"}
 
-    room.history_json = json.dumps(history)
+    history.append({"role": "player", "question": question})
+    history.append({"role": "ai", "answer": result["answer"]})
+
+    room.history_json = json.dumps(history, ensure_ascii=False)
+    room.phase = "active"
+    room.status = "active"
     db.add(room)
     db.commit()
     db.refresh(room)
 
     return {
-        "question_id": f"q_{uuid.uuid4()}",
-        "answer": answer,
+        "question_id": str(uuid.uuid4()),
+        "answer": result["answer"],
         "updated_history": history,
     }

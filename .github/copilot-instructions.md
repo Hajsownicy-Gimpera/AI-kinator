@@ -1,12 +1,17 @@
 # Copilot Development Guide – AI-kinator
 
-**Last Updated:** 2026-04-29  
-**Status:** In Development (12/21 Tasks Completed) – Room state persistence + question endpoint (BE-5 implemented) + optimized data fetching
-**Status:** In Development (12/21 Tasks Completed) – Room state persistence + question endpoint (BE-5 implemented) + optimized data fetching
+**Last Updated:** 2026-05-03  
+**Status:** In Development (14/20 Tasks Completed)
 
 ## 📊 Current Sprint Status
 
 **Full task details:** See `docs/AIKINATOR-PROTOTYPE.md`
+
+### Recently Completed (LLM-1 through LLM-4)
+- **LLM-1:** LangChain + Google Gemini configured (`backend/ai/config.py`), dependencies added, `.env.example` created
+- **LLM-2:** System prompt in Polish with 10 example characters, placeholders, dummy mode (`backend/ai/prompts.py`)
+- **LLM-3:** `LLMChain` wrapper with validation, "Nie wiem" fallback, retry (2 attempts with backoff), dummy mode (`backend/ai/llm_chain.py`)
+- **LLM-4:** `POST /rooms/{room_id}/question` endpoint integrated with LLMChain, conversation history persisted in DB, input validation (1-500 chars)
 
 ---
 
@@ -249,53 +254,37 @@ POST /rooms/{room_id}/question
 ```
 ai-kinator/
 ├── backend/
-│   ├── main.py                 # FastAPI app entry
+│   ├── main.py                 # FastAPI app – all endpoints, Pydantic models, DB setup
+│   ├── pyproject.toml          # Python project config (uv)
 │   ├── requirements.txt        # Python dependencies
-│   ├── models/
-│   │   ├── game.py            # GameSession, GameRoom classes
-│   │   └── player.py          # Player model
-│   ├── routes/
-│   │   ├── games.py           # Solo game endpoints
-│   │   ├── rooms.py           # Multiplayer room endpoints
-│   │   └── health.py          # Health check
+│   ├── .env.example            # Env var template (GOOGLE_API_KEY)
 │   ├── ai/
-│   │   ├── llm_chain.py       # LangChain wrapper
-│   │   └── prompts.py         # System prompts
-│   ├── db/
-│   │   └── store.py           # SQLite/JSON persistence
+│   │   ├── __init__.py
+│   │   ├── config.py           # LLM model config
+│   │   ├── llm_chain.py        # LangChain wrapper, validation, dummy mode
+│   │   └── prompts.py          # System prompt, EXAMPLE_CHARACTERS list
 │   └── tests/
-│       ├── test_game.py
-│       └── test_llm_chain.py
+│       ├── test_room_state.py
+│       ├── test_llm_chain.py
+│       └── test_question_endpoint.py
 ├── frontend/
 │   ├── package.json
 │   ├── public/
 │   │   └── index.html
 │   ├── src/
-│   │   ├── App.js                  # Main component
+│   │   ├── App.js              # Main component + routing
 │   │   ├── App.css
 │   │   ├── index.js
 │   │   ├── index.css
-│   │   ├── pages/
-│   │   │   └── GameView/           # Game room interface
-│   │   │       ├── GameView.js     # Room state polling, chat, input
-│   │   │       └── GameView.css    # Responsive game UI
-│   │   ├── components/             # (Planned)
-│   │   │   ├── GameRoom.js
-│   │   │   ├── QuestionInput.js
-│   │   │   └── Leaderboard.js
-│   │   ├── hooks/                  # (Planned)
-│   │   │   ├── useGameState.js     # Polling logic
-│   │   │   └── useGameSession.js
-│   │   ├── context/                # (Planned)
-│   │   │   └── GameContext.js
-│   │   ├── api/                    # (Planned)
-│   │   │   └── client.js           # REST client
-│   │   └── tests/                  # (Planned)
-│   │       └── GameRoom.test.js
-│   └── .eslintrc.json
+│   │   └── pages/
+│   │       └── GameView/       # Game room interface
+│   │           ├── GameView.js # Room state polling, chat, input
+│   │           └── GameView.css
+├── docs/
+│   └── AIKINATOR-PROTOTYPE.md  # Implementation tasks
 ├── .github/
-│   ├── copilot-instructions.md      # (This file)
-│   └── workflows/                   # CI/CD pipelines (if added)
+│   ├── copilot-instructions.md # (This file)
+│   └── workflows/
 └── README.md
 ```
 
@@ -349,10 +338,7 @@ npm test -- GameRoom
 
 **Backend (.env or env vars):**
 ```
-OPENAI_API_KEY=sk_...           # or other LLM provider key
-DATABASE_URL=sqlite:///game.db  # or file path
-POLLING_INTERVAL=3              # Suggested default (seconds)
-ROOM_TIMEOUT=1800              # Room expiration (seconds)
+GOOGLE_API_KEY=your-google-api-key-here  # Google AI Studio (Gemini)
 ```
 
 **Frontend (.env):**
@@ -399,11 +385,6 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 
 // Navigate to game
 navigate(`/room/${roomId}`);
-
-### Recent backend updates
-
-- **BE-5 implemented (2026-04-29):** `POST /rooms/{room_id}/question` now exists in the backend. Current behaviour: returns a dummy answer (`Tak|Nie|Nie wiem`), persists question+answer to `history_json`, and includes validation (empty question -> 400, player not in room -> 404). Tests added: `backend/tests/test_question_endpoint.py`.
-
 
 ### Recent backend updates
 
@@ -466,20 +447,6 @@ Follow the ticket ID format for branch names:
 - Log all LLM inputs/outputs to `debug.log` for analysis
 - Use fallback answer `"Nie wiem"` if LLM behaves unexpectedly
 
-### Implementing LLM Integration (Next)
-
-The `/rooms/{room_id}/question` endpoint has been created with mock implementation. To integrate LangChain:
-
-1. Create `backend/ai/llm_chain.py` with LangChain wrapper
-2. Create `backend/ai/prompts.py` with system prompts
-3. Update `POST /rooms/{room_id}/question` to:
-   - Fetch room's secret character from database
-   - Fetch conversation history from database
-   - Call LLM with system prompt + context
-   - Validate response (must be "Tak", "Nie", or "Nie wiem")
-   - Save Q&A to database
-   - Return response to frontend
-
 ---
 
 ## Performance & Scaling Notes
@@ -507,4 +474,4 @@ The `/rooms/{room_id}/question` endpoint has been created with mock implementati
 
 - **Project Spec:** `copilot-instructions.md` (project requirements & team roles)
 
-*Last updated: 2026-04-25. Update this file as project structure and conventions evolve.*
+*Last updated: 2026-05-03. Update this file as project structure and conventions evolve.*
