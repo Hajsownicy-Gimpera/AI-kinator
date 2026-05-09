@@ -94,7 +94,7 @@ const GameView = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          player_id: 'player_1', // TODO: Get from user context
+          player_id: 'p1', // TODO: Get from user context
           question: question.trim(),
         }),
       });
@@ -137,7 +137,7 @@ const GameView = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        player_id: 'player_1',
+        player_id: 'p1', // TODO: Get from user context
         guess: guess.trim(),
         }),
       });
