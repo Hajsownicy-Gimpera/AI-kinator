@@ -12,7 +12,6 @@ const GameView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [question, setQuestion] = useState('');
-  const [guess, setGuess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -150,7 +149,7 @@ const GameView = () => {
       if (!response.ok) throw new Error(`Błąd: ${response.statusText}`);
 
       fetchRoomState();
-      setGuess('');
+      setQuestion('');
     } catch (err) {
       setError(err.message);
     } finally {
