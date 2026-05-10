@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import WinScreen from '../../components/WinScreen/WinScreen';
 import './GameView.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -59,14 +60,19 @@ const GameView = () => {
     fetchHistory();
   }, [roomId]);
 
-  // Poll room state every 3 seconds
+  // Poll room state every 3 seconds (but NOT when game is won)
   useEffect(() => {
+    // Don't poll if game is already won
+    if (roomState?.winner_id) {
+      return;
+    }
+
     const pollingInterval = setInterval(() => {
       fetchRoomState();
     }, 3000);
 
     return () => clearInterval(pollingInterval);
-  }, [fetchRoomState]);
+  }, [fetchRoomState, roomState?.winner_id]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -124,7 +130,8 @@ const GameView = () => {
   const handleGuess = async (e) => {
     e.preventDefault();
 
-    if (!question.trim()) {
+    const guessText = question.trim();
+    if (!guessText) {
       setError('Próba odgadnięcia nie może być pusta');
       return;
     }
@@ -132,26 +139,45 @@ const GameView = () => {
     try {
       setSubmitting(true);
       setError(null);
+      
+      // Real POST to /guess endpoint
       const response = await fetch(`${API_URL}/rooms/${roomId}/guess`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        player_id: 'p1', // TODO: Get from user context
-        guess: question.trim(),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          player_id: 'p1', // TODO: Get from user context
+          guess: guessText,
         }),
       });
 
       if (response.status === 404) {
+        setError('Endpoint /guess nie jest jeszcze dostępny');
         console.warn("Endpoint /guess not implemented yet (404)");
         return;
       }
 
-      if (!response.ok) throw new Error(`Błąd: ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Błąd: ${response.statusText}`);
+      }
 
-      fetchRoomState();
-      setQuestion('');
+      const responseData = await response.json();
+
+      if (responseData.correct) {
+        // Correct guess - update room state with winner_id
+        setRoomState(prevState => ({
+          ...prevState,
+          winner_id: responseData.winner_id
+        }));
+        setError(null);
+      } else {
+        // Incorrect guess - show message
+        setError(responseData.message || 'To nie ta postać. Spróbuj jeszcze raz!');
+      }
+
+      setQuestion(''); // wyczyść pole po zgadnięciu
     } catch (err) {
       setError(err.message);
+      console.error('Error submitting guess:', err);
     } finally {
       setSubmitting(false);
     }
@@ -190,6 +216,11 @@ const GameView = () => {
         </div>
       </div>
     );
+  }
+
+  // Show win screen if player won
+  if (roomState.winner_id) {
+    return <WinScreen roomState={roomState} conversationHistory={conversationHistory} />;
   }
 
   return (
@@ -246,35 +277,33 @@ const GameView = () => {
           </div>
 
           {/* Input area */}
-          <form onSubmit={(e) => e.preventDefault()} className="chat-input-area">
-            <input
-              type="text"
-              className="question-input"
-              placeholder="Zadaj pytanie tak/nie lub odgadnij postać..."
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              disabled={submitting}
-              maxLength={200}
-            />
-            {/* Question submit button */}
-            <button
-              type="submit"
-              className="send-button"
-              onClick={handleSubmitQuestion}
-              disabled={submitting || !question.trim()}
-            >
-              {submitting ? '⏳' : '📤'} Pytam
-            </button>
-            {/* Guess submit button */}
-            <button 
-              type="submit" 
-              className="send-button" 
-              onClick={handleGuess}
-              disabled={submitting || !question.trim()}
-            >
-              {submitting ? '⏳' : '🤔'} Zgaduję
-            </button>
-          </form>
+            <form onSubmit={(e) => e.preventDefault()} className="chat-input-area">
+              <input
+                type="text"
+                className="question-input"
+                placeholder="Zadaj pytanie lub wpisz zgadywaną postać..."
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                disabled={submitting}
+                maxLength={200}
+              />
+              <button
+                type="submit"
+                className="send-button"
+                onClick={handleSubmitQuestion}
+                disabled={submitting || !question.trim()}
+              >
+                {submitting ? '⏳' : '📤'} Pytam
+              </button>
+              <button 
+                type="submit" 
+                className="send-button" 
+                onClick={handleGuess}
+                disabled={submitting || !question.trim()}
+              >
+                {submitting ? '⏳' : '🤔'} Zgaduję
+              </button>
+            </form>
 
         </div>
       </div>
