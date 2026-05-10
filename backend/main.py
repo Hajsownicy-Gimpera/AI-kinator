@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import random
+import unicodedata
 import uuid
 from datetime import datetime
 from typing import Literal
@@ -138,12 +139,31 @@ class QuestionResponse(BaseModel):
     updated_history: list[ConversationEntry]
 
 
+class GuessRequest(BaseModel):
+    player_id: str
+    guess: str
+
+
+class GuessResponse(BaseModel):
+    correct: bool
+    winner_id: str | None
+    message: str
+    updated_history: list[ConversationEntry]
+
+
 # --- HELPER FUNCTIONS ---
 def get_room_logic(room_id: str, db: Session):
     room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
     return room
+
+
+def _normalize_for_guess(value: str) -> str:
+    """Lowercase, strip whitespace, remove diacritics for forgiving guess comparison."""
+    decomposed = unicodedata.normalize("NFKD", value or "")
+    no_accents = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return "".join(no_accents.lower().split())
 
 
 def _json_list_value(raw_value, fallback):
@@ -168,12 +188,18 @@ def get_room_with_state(room_id: str, db: Session) -> RoomState:
     if room_phase not in {"waiting", "active", "ended"}:
         room_phase = "waiting"
 
+    players = _json_list_value(room.players_json, DEFAULT_PLAYERS)
+    winner_id = next(
+        (p.get("player_id") for p in players if p.get("has_guessed")),
+        None,
+    )
+
     return RoomState(
         room_id=room.room_id,
         game_mode=room.game_mode,
         phase=room_phase,
-        players=_json_list_value(room.players_json, DEFAULT_PLAYERS),
-        winner_id=None,
+        players=players,
+        winner_id=winner_id,
         created_at=room.created_at,
         secret_character=room.secret_character,
     )
@@ -306,5 +332,76 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
     return {
         "question_id": str(uuid.uuid4()),
         "answer": result["answer"],
+        "updated_history": history,
+    }
+
+
+@app.post("/rooms/{room_id}/guess", response_model=GuessResponse)
+def submit_guess(room_id: str, request: GuessRequest, db: Session = Depends(get_db)):
+    """Submit a guess; compare normalized strings against the secret character."""
+    room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    guess = request.guess.strip()
+    if not guess:
+        raise HTTPException(status_code=400, detail="Guess cannot be empty")
+    if len(guess) > 100:
+        raise HTTPException(status_code=400, detail="Guess must be between 1 and 100 characters")
+
+    players = _json_list_value(room.players_json, DEFAULT_PLAYERS)
+    if not any(p.get("player_id") == request.player_id for p in players):
+        raise HTTPException(status_code=404, detail="Player not in room")
+
+    if room.phase == "ended":
+        raise HTTPException(status_code=400, detail="Game has already ended")
+
+    secret_character = (room.secret_character or "").strip()
+    if not secret_character:
+        secret_character = random.choice(EXAMPLE_CHARACTERS)
+        room.secret_character = secret_character
+        logger.warning(
+            "Room %s had no secret_character; assigned fallback character for legacy/migrated room",
+            room_id,
+        )
+
+    correct = _normalize_for_guess(guess) == _normalize_for_guess(secret_character)
+    history = _json_list_value(room.history_json, DEFAULT_HISTORY)
+    winner_id: str | None = None
+
+    if correct:
+        room.phase = "ended"
+        room.status = "ended"
+        for p in players:
+            if p.get("player_id") == request.player_id:
+                p["has_guessed"] = True
+                p["guessed_at"] = datetime.utcnow().isoformat()
+                p["guess_count"] = p.get("guess_count", 0) + 1
+        room.players_json = json.dumps(players, ensure_ascii=False)
+        winner_id = request.player_id
+        message = f"Brawo! {guess} to faktycznie sekretna postać."
+        history_answer = "Tak"
+    else:
+        room.phase = "active"
+        room.status = "active"
+        for p in players:
+            if p.get("player_id") == request.player_id:
+                p["guess_count"] = p.get("guess_count", 0) + 1
+        room.players_json = json.dumps(players, ensure_ascii=False)
+        message = "To nie ta postać. Spróbuj jeszcze raz!"
+        history_answer = "Nie"
+
+    history.append({"role": "player", "question": f"[Zgaduję] {guess}"})
+    history.append({"role": "ai", "answer": history_answer})
+
+    room.history_json = json.dumps(history, ensure_ascii=False)
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+
+    return {
+        "correct": correct,
+        "winner_id": winner_id,
+        "message": message,
         "updated_history": history,
     }
