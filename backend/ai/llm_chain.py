@@ -34,8 +34,11 @@ class LLMChain:
             {"answer": "Tak"|"Nie"|"Nie wiem"}
         """
         if self.llm is None:
+            logger.info("Question endpoint: using DUMMY mode (no GOOGLE_API_KEY)")
             dummy = get_dummy_answer()
             return {"answer": dummy}
+
+        logger.info("Question endpoint: calling Google AI Studio (gemini)")
 
         prompt_text = SYSTEM_PROMPT.format(
             secret_character=self.character_name,

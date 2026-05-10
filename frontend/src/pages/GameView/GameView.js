@@ -138,7 +138,7 @@ const GameView = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         player_id: 'p1', // TODO: Get from user context
-        guess: guess.trim(),
+        guess: question.trim(),
         }),
       });
 
