@@ -12,7 +12,6 @@ const GameView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [question, setQuestion] = useState('');
-  const [guess, setGuess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -138,7 +137,7 @@ const GameView = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         player_id: 'p1', // TODO: Get from user context
-        guess: guess.trim(),
+        guess: question.trim(),
         }),
       });
 
@@ -150,7 +149,7 @@ const GameView = () => {
       if (!response.ok) throw new Error(`Błąd: ${response.statusText}`);
 
       fetchRoomState();
-      setGuess('');
+      setQuestion('');
     } catch (err) {
       setError(err.message);
     } finally {
