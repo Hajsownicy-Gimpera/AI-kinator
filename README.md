@@ -10,6 +10,7 @@ Zobacz: [AIKINATOR-PROTOTYPE](docs/AIKINATOR-PROTOTYPE.md)
 
 - **Node.js** (v18+)
 - **Python** (v3.9+)
+- **Docker Engine** (v29.1.3+ - earlier may work just fine too)
 - **UV** package manager (automatically installed, or install manually: `pip3 install uv` or install from https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Installation & Running
