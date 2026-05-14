@@ -1,9 +1,9 @@
 # AI-kinator Prototype v0.1 – Implementation Tasks
 
-**Last Updated:** 2026-05-09  
-**Status:** In Development (12/21 Tasks Completed)
+**Last Updated:** 2026-05-10  
+**Status:** MVP Reached, Still InDev
 
-### ✅ Completed Tasks (12/21)
+### ✅ Completed Tasks 
 - **BE-1** (2026-04-08): Backend setup + FastAPI with health check
 - **BE-2** (2026-04-12): Room creation endpoints (solo, duel, battle-royale)
 - **BE-3** (2026-04-18): `GET /rooms/{room_id}/state` returns dummy room state
@@ -12,14 +12,13 @@
 - **FE-1** (2026-04-13): Frontend initialization + React
 - **FE-2** (2026-04-15): Home screen with game mode selection
 - **FE-3**: GameView component with polling
+- **LLM-5**: Implement /guess endpoint with character validation
+- **FE-5**: Win screen + guess handler response logic
 - **DEVOPS-1** (2026-04-19): GitHub Actions CI workflow with backend/frontend tests
 - **Spotkanie 1** (2026-04-08): Architecture discussion + roles
 - **Project Spec** (2026-04-12): Complete specification
 - **TRIVIAL** (2026-04-10): Setup command fixes
 
-### ⏳ Ready to Start (2/21)
-- **LLM-5**: Implement /guess endpoint with character validation
-- **FE-5**: Win screen + guess handler response logic
 
 ---
 
