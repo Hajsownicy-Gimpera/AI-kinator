@@ -10,37 +10,23 @@ Zobacz: [AIKINATOR-PROTOTYPE](docs/AIKINATOR-PROTOTYPE.md)
 
 - **Node.js** (v18+)
 - **Python** (v3.9+)
+- **Docker Engine** (v29.1.3+ - earlier may work just fine too)
 - **UV** package manager (automatically installed, or install manually: `pip3 install uv` or install from https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Installation & Running
 
-```bash
-# Install dependencies (backend uses uv manager, triggered automatically)
-# This will:
-# - Install frontend dependencies with npm
-# - Create Python virtual environment
-# - Install backend packages with uv
-npm install
+Before starting the app, create `backend/.env` from `backend/.env.example` and set `GOOGLE_API_KEY` to your Google AI Studio key. If the key is missing, the backend falls back to dummy LLM mode.
 
-# Run both backend and frontend in parallel
-npm run dev
+```bash
+# Start both backend and frontend with Docker Compose
+docker compose up --build
 ```
 
 This will start:
 - **Backend:** `http://localhost:8000` (FastAPI with auto-reload)
 - **Frontend:** `http://localhost:3000` (React development server)
 
-**Or run individually:**
-
-```bash
-# Backend only (http://localhost:8000)
-npm run backend
-# Or: cd backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# Frontend only (http://localhost:3000)
-npm run frontend
-# Or: cd frontend && npm start
-```
+In Docker, the backend starts with `uvicorn` and the frontend starts with `npm start`.
 
 ---
 
