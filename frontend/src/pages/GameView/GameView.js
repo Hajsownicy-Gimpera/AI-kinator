@@ -1,13 +1,342 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import styled from 'styled-components';
 import WinScreen from '../../components/WinScreen/WinScreen';
-import './GameView.css';
+import AIAvatar from '../../components/AIAvatar/AIAvatar';
+import ThemeToggle from '../../components/ThemeToggle/ThemeToggle';
+import { useTheme } from '../../context/ThemeContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+// Styled Components
+const GameViewContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: ${props => props.theme.colors.background};
+  color: ${props => props.theme.colors.text};
+  font-family: ${props => props.theme.fonts.primary};
+`;
+
+const GameHeader = styled.div`
+  background-color: ${props => props.theme.colors.cardBackground};
+  padding: ${props => props.theme.spacing.lg} ${props => props.theme.spacing.xl};
+  box-shadow: 0 4px 12px ${props => props.theme.colors.shadowMedium};
+  border-bottom: 2px solid ${props => props.theme.colors.accent};
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: ${props => props.theme.spacing.lg};
+`;
+
+const GameTitle = styled.h1`
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: ${props => props.theme.colors.text};
+  font-family: ${props => props.theme.fonts.heading};
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.lg};
+`;
+
+const RoomIdBadge = styled.div`
+  font-size: 12px;
+  color: ${props => props.theme.colors.textSecondary};
+  background-color: ${props => props.theme.colors.backgroundSecondary};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.full};
+  font-weight: 600;
+`;
+
+const BackButton = styled.button`
+  background-color: ${props => props.theme.colors.accent};
+  color: ${props => props.theme.colors.buttonText};
+  border: none;
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-family: ${props => props.theme.fonts.primary};
+
+  &:hover {
+    background-color: ${props => props.theme.colors.accentDark};
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const GameContainer = styled.div`
+  display: flex;
+  flex: 1;
+  gap: ${props => props.theme.spacing.lg};
+  padding: ${props => props.theme.spacing.xl};
+  overflow: hidden;
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    gap: ${props => props.theme.spacing.md};
+    padding: ${props => props.theme.spacing.md};
+  }
+`;
+
+const GameLeft = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30%;
+  background-color: ${props => props.theme.colors.cardBackground};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  box-shadow: 0 8px 24px ${props => props.theme.colors.shadowMedium};
+  padding: ${props => props.theme.spacing.xl};
+  gap: ${props => props.theme.spacing.lg};
+
+  @media (max-width: 1024px) {
+    flex: 0 0 auto;
+    max-height: 200px;
+  }
+`;
+
+const ImagePlaceholder = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, ${props => props.theme.colors.backgroundSecondary} 0%, ${props => props.theme.colors.cardBackground} 100%);
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: 18px;
+  color: ${props => props.theme.colors.textSecondary};
+  text-align: center;
+  font-weight: 500;
+`;
+
+const GameRight = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background-color: ${props => props.theme.colors.cardBackground};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  box-shadow: 0 8px 24px ${props => props.theme.colors.shadowMedium};
+  overflow: hidden;
+
+  @media (max-width: 1024px) {
+    flex: 1;
+    min-height: 300px;
+  }
+`;
+
+const ChatHeader = styled.div`
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  background-color: ${props => props.theme.colors.accent};
+  color: ${props => props.theme.colors.buttonText};
+  font-weight: 600;
+  font-size: 16px;
+  border-bottom: 2px solid ${props => props.theme.colors.accentDark};
+`;
+
+const ChatMessages = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: ${props => props.theme.spacing.md};
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.md};
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${props => props.theme.colors.backgroundSecondary};
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.colors.accent};
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: ${props => props.theme.colors.accentDark};
+  }
+`;
+
+const Message = styled.div`
+  display: flex;
+  margin-bottom: ${props => props.theme.spacing.sm};
+  animation: slideIn 0.3s ease;
+  justify-content: ${props => props.$isPlayer ? 'flex-end' : 'flex-start'};
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const MessageBubble = styled.div`
+  max-width: 70%;
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.md};
+  word-wrap: break-word;
+  font-size: 14px;
+  line-height: 1.4;
+  background-color: ${props => props.$isPlayer ? props.theme.colors.playerMessage : props.theme.colors.aiMessage};
+  color: ${props => props.$isPlayer ? 'white' : props.theme.colors.aiMessageText};
+  border: ${props => !props.$isPlayer ? `1px solid ${props.theme.colors.border}` : 'none'};
+  border-bottom-right-radius: ${props => props.$isPlayer ? '4px' : props.theme.borderRadius.md};
+  border-bottom-left-radius: ${props => props.$isPlayer ? props.theme.borderRadius.md : '4px'};
+`;
+
+const MessageLabel = styled.div`
+  font-size: 12px;
+  color: ${props => props.theme.colors.textSecondary};
+  margin-bottom: ${props => props.theme.spacing.sm};
+  font-weight: 600;
+`;
+
+const MessageContent = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const ChatInputArea = styled.form`
+  display: flex;
+  gap: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.md};
+  background-color: ${props => props.theme.colors.backgroundSecondary};
+  border-top: 1px solid ${props => props.theme.colors.border};
+
+  @media (max-width: 640px) {
+    flex-wrap: wrap;
+  }
+`;
+
+const QuestionInput = styled.input`
+  flex: 1;
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  border: 2px solid ${props => props.theme.colors.inputBorder};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: 14px;
+  font-family: ${props => props.theme.fonts.primary};
+  background-color: ${props => props.theme.colors.inputBackground};
+  color: ${props => props.theme.colors.text};
+  transition: border-color 0.3s ease;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.inputBorderFocus};
+  }
+
+  &::placeholder {
+    color: ${props => props.theme.colors.textSecondary};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 640px) {
+    flex-basis: 100%;
+  }
+`;
+
+const SendButton = styled.button`
+  background-color: ${props => props.theme.colors.accent};
+  color: ${props => props.theme.colors.buttonText};
+  border: none;
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.md};
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  font-family: ${props => props.theme.fonts.primary};
+
+  &:hover {
+    background-color: ${props => props.theme.colors.accentDark};
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background-color: ${props => props.theme.colors.textSecondary};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 640px) {
+    flex-basis: 100%;
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: ${props => props.theme.spacing.xl};
+  color: ${props => props.theme.colors.accent};
+  font-weight: 500;
+  gap: ${props => props.theme.spacing.md};
+`;
+
+const Spinner = styled.div`
+  border: 3px solid ${props => props.theme.colors.border};
+  border-top: 3px solid ${props => props.theme.colors.accent};
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const ErrorMessage = styled.div`
+  background-color: ${props => props.theme.colors.error};
+  color: white;
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.md};
+  margin-bottom: ${props => props.theme.spacing.md};
+  border-left: 4px solid ${props => props.theme.colors.accentDark};
+`;
+
+const ToggleWrapper = styled.div`
+  position: absolute;
+  top: ${props => props.theme.spacing.lg};
+  right: ${props => props.theme.spacing.xl};
+`;
 
 const GameView = () => {
   const { roomId } = useParams();
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [roomState, setRoomState] = useState(null);
   const [conversationHistory, setConversationHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,38 +512,48 @@ const GameView = () => {
     }
   };
 
-
-
   if (loading) {
     return (
-      <div className="game-view">
-        <div className="game-header">
-          <h1>AI-kinator</h1>
-          <button className="back-button" onClick={() => navigate('/')}>
-            ← Powrót do menu
-          </button>
-        </div>
-        <div className="loading">
-          <div className="spinner"></div>
+      <GameViewContainer theme={theme}>
+        <GameHeader theme={theme}>
+          <GameTitle theme={theme}>AI-kinator</GameTitle>
+          <HeaderRight theme={theme}>
+            <ToggleWrapper theme={theme}>
+              <ThemeToggle />
+            </ToggleWrapper>
+            <BackButton theme={theme} onClick={() => navigate('/')}>
+              ← Powrót do menu
+            </BackButton>
+          </HeaderRight>
+        </GameHeader>
+        <LoadingContainer theme={theme}>
+          <Spinner theme={theme} />
           Ładowanie pokoju gry...
-        </div>
-      </div>
+        </LoadingContainer>
+      </GameViewContainer>
     );
   }
 
   if (!roomState) {
     return (
-      <div className="game-view">
-        <div className="game-header">
-          <h1>AI-kinator</h1>
-          <button className="back-button" onClick={() => navigate('/')}>
-            ← Powrót do menu
-          </button>
-        </div>
-        <div className="error-message">
-          Nie udało się załadować stanu pokoju. Spróbuj ponownie.
-        </div>
-      </div>
+      <GameViewContainer theme={theme}>
+        <GameHeader theme={theme}>
+          <GameTitle theme={theme}>AI-kinator</GameTitle>
+          <HeaderRight theme={theme}>
+            <ToggleWrapper theme={theme}>
+              <ThemeToggle />
+            </ToggleWrapper>
+            <BackButton theme={theme} onClick={() => navigate('/')}>
+              ← Powrót do menu
+            </BackButton>
+          </HeaderRight>
+        </GameHeader>
+        <LoadingContainer theme={theme}>
+          <ErrorMessage theme={theme}>
+            Nie udało się załadować stanu pokoju. Spróbuj ponownie.
+          </ErrorMessage>
+        </LoadingContainer>
+      </GameViewContainer>
     );
   }
 
@@ -224,90 +563,95 @@ const GameView = () => {
   }
 
   return (
-    <div className="game-view">
+    <GameViewContainer theme={theme}>
       {/* Header */}
-      <div className="game-header">
-        <h1>AI-kinator</h1>
-        <div className="room-id">ID pokoju: {roomState.room_id}</div>
-        <button className="back-button" onClick={() => navigate('/')}>
-          ← Powrót do menu
-        </button>
-      </div>
+      <GameHeader theme={theme}>
+        <GameTitle theme={theme}>AI-kinator</GameTitle>
+        <HeaderRight theme={theme}>
+          <RoomIdBadge theme={theme}>ID: {roomState.room_id}</RoomIdBadge>
+          <ToggleWrapper theme={theme}>
+            <ThemeToggle />
+          </ToggleWrapper>
+          <BackButton theme={theme} onClick={() => navigate('/')}>
+            ← Powrót do menu
+          </BackButton>
+        </HeaderRight>
+      </GameHeader>
 
       {/* Main container */}
-      <div className="game-container">
-        {/* Left side - Akinator image */}
-        <div className="game-left">
-          <div className="image-placeholder">
+      <GameContainer theme={theme}>
+        {/* Left side - AI Avatar */}
+        <GameLeft theme={theme}>
+          <AIAvatar 
+            isSubmitting={submitting} 
+            gamePhase={roomState.game_phase} 
+            isWinner={roomState.winner_id}
+          />
+          <ImagePlaceholder theme={theme}>
             🎭 Zgadnij postać!
-          </div>
-          {/* You can replace with actual image:
-          <img 
-            src="/akinator.png" 
-            alt="Akinator" 
-            className="akinator-image" 
-          /> */}
-        </div>
+          </ImagePlaceholder>
+        </GameLeft>
 
         {/* Right side - Chat */}
-        <div className="game-right">
-          <div className="chat-header">Rozmowa ({conversationHistory?.length || 0} wiadomości)</div>
+        <GameRight theme={theme}>
+          <ChatHeader theme={theme}>Rozmowa ({conversationHistory?.length || 0} wiadomości)</ChatHeader>
 
           {/* Chat messages */}
-          <div className="chat-messages">
-            {error && <div className="error-message">{error}</div>}
+          <ChatMessages theme={theme}>
+            {error && <ErrorMessage theme={theme}>{error}</ErrorMessage>}
 
             {conversationHistory && conversationHistory.length > 0 ? (
               conversationHistory.map((entry, idx) => (
-                <div key={idx} className={`message ${entry.role}`}>
-                  <div>
-                    <div className="message-label">{entry.role === 'player' ? '🧑 Ty' : '🤖 AI-kinator'}</div>
-                    <div className="message-bubble">
+                <Message key={idx} $isPlayer={entry.role === 'player'} theme={theme}>
+                  <MessageContent theme={theme}>
+                    <MessageLabel theme={theme}>
+                      {entry.role === 'player' ? '🧑 Ty' : '🤖 AI-kinator'}
+                    </MessageLabel>
+                    <MessageBubble $isPlayer={entry.role === 'player'} theme={theme}>
                       {entry.role === 'player' ? entry.question : entry.answer}
-                    </div>
-                  </div>
-                </div>
+                    </MessageBubble>
+                  </MessageContent>
+                </Message>
               ))
             ) : (
-              <div className="loading">
+              <LoadingContainer theme={theme}>
                 <div>Brak pytań. Zacznij rozmawiać!</div>
-              </div>
+              </LoadingContainer>
             )}
             <div ref={messagesEndRef} />
-          </div>
+          </ChatMessages>
 
           {/* Input area */}
-            <form onSubmit={(e) => e.preventDefault()} className="chat-input-area">
-              <input
-                type="text"
-                className="question-input"
-                placeholder="Zadaj pytanie lub wpisz zgadywaną postać..."
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                disabled={submitting}
-                maxLength={200}
-              />
-              <button
-                type="submit"
-                className="send-button"
-                onClick={handleSubmitQuestion}
-                disabled={submitting || !question.trim()}
-              >
-                {submitting ? '⏳' : '📤'} Pytam
-              </button>
-              <button 
-                type="submit" 
-                className="send-button" 
-                onClick={handleGuess}
-                disabled={submitting || !question.trim()}
-              >
-                {submitting ? '⏳' : '🤔'} Zgaduję
-              </button>
-            </form>
-
-        </div>
-      </div>
-    </div>
+          <ChatInputArea onSubmit={(e) => e.preventDefault()} theme={theme}>
+            <QuestionInput
+              theme={theme}
+              type="text"
+              placeholder="Zadaj pytanie lub wpisz zgadywaną postać..."
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              disabled={submitting}
+              maxLength={200}
+            />
+            <SendButton 
+              theme={theme}
+              type="submit"
+              onClick={handleSubmitQuestion}
+              disabled={submitting || !question.trim()}
+            >
+              {submitting ? '⏳' : '📤'} Pytam
+            </SendButton>
+            <SendButton 
+              theme={theme}
+              type="submit"
+              onClick={handleGuess}
+              disabled={submitting || !question.trim()}
+            >
+              {submitting ? '⏳' : '🤔'} Zgaduję
+            </SendButton>
+          </ChatInputArea>
+        </GameRight>
+      </GameContainer>
+    </GameViewContainer>
   );
 };
 
