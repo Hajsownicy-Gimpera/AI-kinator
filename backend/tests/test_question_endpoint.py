@@ -1,21 +1,8 @@
-import importlib
-import sqlite3
-import sys
-
-import pytest
-from fastapi.testclient import TestClient
-
-from .test_room_state import _create_legacy_database
+from .test_room_state import _bootstrap_app
 
 
 def test_submit_question_persists_history_and_returns_answer(tmp_path, monkeypatch):
-    db_path = tmp_path / "rooms.db"
-    _create_legacy_database(db_path)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
-    sys.modules.pop("main", None)
-
-    main = importlib.import_module("main")
-    client = TestClient(main.app)
+    main, client = _bootstrap_app(tmp_path, monkeypatch)
 
     # create new room which has default player p1 and default history length 2
     create_response = client.post("/games/duel")
@@ -39,13 +26,7 @@ def test_submit_question_persists_history_and_returns_answer(tmp_path, monkeypat
 
 
 def test_submit_question_empty_question_returns_400(tmp_path, monkeypatch):
-    db_path = tmp_path / "rooms.db"
-    _create_legacy_database(db_path)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
-    sys.modules.pop("main", None)
-
-    main = importlib.import_module("main")
-    client = TestClient(main.app)
+    main, client = _bootstrap_app(tmp_path, monkeypatch)
 
     create_response = client.post("/games/duel")
     room_id = create_response.json()["room_id"]
@@ -58,13 +39,7 @@ def test_submit_question_empty_question_returns_400(tmp_path, monkeypatch):
 
 
 def test_submit_question_too_long_returns_400(tmp_path, monkeypatch):
-    db_path = tmp_path / "rooms.db"
-    _create_legacy_database(db_path)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
-    sys.modules.pop("main", None)
-
-    main = importlib.import_module("main")
-    client = TestClient(main.app)
+    main, client = _bootstrap_app(tmp_path, monkeypatch)
 
     create_response = client.post("/games/duel")
     room_id = create_response.json()["room_id"]
@@ -76,13 +51,7 @@ def test_submit_question_too_long_returns_400(tmp_path, monkeypatch):
 
 
 def test_submit_question_unknown_room_returns_404(tmp_path, monkeypatch):
-    db_path = tmp_path / "rooms.db"
-    _create_legacy_database(db_path)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
-    sys.modules.pop("main", None)
-
-    main = importlib.import_module("main")
-    client = TestClient(main.app)
+    main, client = _bootstrap_app(tmp_path, monkeypatch)
 
     payload = {"player_id": "p1", "question": "Czy to test?"}
     resp = client.post("/rooms/non-existing-room/question", json=payload)
@@ -92,13 +61,7 @@ def test_submit_question_unknown_room_returns_404(tmp_path, monkeypatch):
 
 
 def test_submit_question_player_not_in_room_returns_404(tmp_path, monkeypatch):
-    db_path = tmp_path / "rooms.db"
-    _create_legacy_database(db_path)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
-    sys.modules.pop("main", None)
-
-    main = importlib.import_module("main")
-    client = TestClient(main.app)
+    main, client = _bootstrap_app(tmp_path, monkeypatch)
 
     create_response = client.post("/games/duel")
     room_id = create_response.json()["room_id"]

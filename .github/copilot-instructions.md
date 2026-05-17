@@ -58,8 +58,8 @@ cd backend && uv sync
 - `POST /games/solo` – Create solo game
 - `POST /games/duel` – Create duel room
 - `POST /games/battle-royale` – Create battle royale room
-- `GET /rooms/{room_id}/join` – Full room history with conversation (initial load)
-- `GET /rooms/{room_id}/state` – Current game state for polling (no conversation history)
+ - `GET /rooms/{room_id}/join` – Full room history with conversation (initial load)
+ - `GET /rooms/{room_id}/state` – Current game state for polling (includes conversation_history)
 - `POST /rooms/{room_id}/question` – Submit question and get AI response
 
 ### Frontend (React)
@@ -205,11 +205,11 @@ Your answer:
 ### Polling & State Updates
 
 - **Initial load:** `GET /rooms/{room_id}/join` fetches full room state + conversation history (called once on component mount)
-- **Polling endpoint:** `GET /rooms/{room_id}/state` polls every 3 seconds for game state updates (no conversation history)
+ - **Polling endpoint:** `GET /rooms/{room_id}/state` polls every 3 seconds for game state updates (returns full room state, including `conversation_history`)
 - **Question submission:** `POST /rooms/{room_id}/question` submits question and immediately returns AI answer
 - **Conversation updates:** Frontend maintains separate `conversationHistory` state, only updated by question submissions and initial load
-- **Security contract:** state response must omit `secret_character`; returned fields are `room_id`, `game_mode`, `players`, `game_phase`, `winner_id`, `created_at`
-- **Current implementation:** `GET /rooms/{room_id}/state` returns the persisted room state without `conversation_history`, while `GET /rooms/{room_id}/join` includes the full conversation history from `RoomDB`
+ - **Security contract:** state response must omit `secret_character`; returned fields include `room_id`, `game_mode`, `players`, `phase` (or `game_phase`), `winner_id`, `created_at`, and `conversation_history`
+ - **Current implementation:** `GET /rooms/{room_id}/state` returns the persisted room state including `conversation_history`, and `GET /rooms/{room_id}/join` also includes the full conversation history from `RoomDB`
 - **Timeout:** Game rooms expire after 30 minutes of inactivity
 
 ### API Request/Response Format
@@ -353,10 +353,10 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 **Features Implemented:**
 - **Dual Data Fetching Strategy:**
   - Initial load: `GET /rooms/{room_id}/join` (full state + conversation history)
-  - Polling: `GET /rooms/{room_id}/state` every 3 seconds (game status only)
+    - Polling: `GET /rooms/{room_id}/state` every 3 seconds (full room state including `conversation_history`)
 - **Separate State Management:**
   - `roomState` – Players, game phase, winner (updated by polling)
-  - `conversationHistory` – Chat messages (updated only by question submissions)
+    - `conversationHistory` – Chat messages (returned by both `/join` and `/state`, and updated by question submissions)
 - **Layout:** 30% left (akinator image placeholder), 70% right (scrollable chat)
 - **Chat Display:** Messages from `conversationHistory` with player/AI distinction
 - **User Input:** Text input with validation, send button, auto-disables when empty
@@ -370,7 +370,7 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 
 **State Flow:**
 1. Component mount → Fetch history from `/join` → Set `roomState` + `conversationHistory`
-2. Polling starts → Every 3 seconds fetch `/state` → Update `roomState` only
+ 2. Polling starts → Every 3 seconds fetch `/state` → Update `roomState` and `conversationHistory`
 3. User submits question → POST to `/question` → Add Q&A to `conversationHistory`
 
 **To Use:**
@@ -384,6 +384,7 @@ navigate(`/room/${roomId}`);
 ### Recent backend updates
 
 - **BE-5 implemented (2026-04-29):** `POST /rooms/{room_id}/question` now exists in the backend. Current behaviour: returns a dummy answer (`Tak|Nie|Nie wiem`), persists question+answer to `history_json`, and includes validation (empty question -> 400, player not in room -> 404). Tests added: `backend/tests/test_question_endpoint.py`.
+- **BE-6 implemented (2026-05-17):** Room creation now exposes `invite_code` and `max_players` (`solo` = 1, `duel` = 2, `battle_royale` = 10). `POST /rooms/{room_id}/join` accepts `username` and returns `player_id`, full room state, and history. `GET /rooms/{room_id}/state` now returns the full room payload with players and conversation history, while `guess`/`question`/`join` reject actions after `phase=ended`. Tests updated in `backend/tests/test_room_state.py` and `backend/tests/test_guess_endpoint.py`.
 
 ```
 
