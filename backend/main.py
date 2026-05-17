@@ -333,10 +333,10 @@ def create_duel_game(db: Session = Depends(get_db)):
 def create_br_game(db: Session = Depends(get_db)):
     return create_room_logic("battle_royale", db)
 
-@app.get("/rooms/{room_id}/state", response_model=GameState, response_model_exclude={"secret_character"})
+@app.get("/rooms/{room_id}/state", response_model=RoomState, response_model_exclude={"secret_character"})
 def get_room_state_polling(room_id: str, db: Session = Depends(get_db)):
-    """Get current game state for polling."""
-    return get_room_with_history(room_id, db)
+    """Get current game state for polling (no conversation history)."""
+    return get_room_with_state(room_id, db)
 
 @app.get("/rooms/{room_id}/join", response_model=GameState, response_model_exclude={"secret_character"})
 def get_room_history(room_id: str, db: Session = Depends(get_db)):

@@ -53,7 +53,7 @@ def test_new_room_schema_and_state_shape(client_and_main):
     assert payload["players"][0]["guessed_at"] is None
     assert payload["winner_id"] is None
     assert isinstance(payload["created_at"], str)
-    assert len(payload["conversation_history"]) == 2
+    assert "conversation_history" not in payload
 
 
 def test_join_endpoint_returns_full_history(client_and_main):
@@ -101,7 +101,7 @@ def test_join_endpoint_creates_player_and_activates_room_when_full(client_and_ma
     state_payload = client.get(f"/rooms/{room_payload['room_id']}/state").json()
     assert state_payload["phase"] == "active"
     assert len(state_payload["players"]) == 2
-    assert len(state_payload["conversation_history"]) == 2
+    assert "conversation_history" not in state_payload
 
 
 def test_get_room_state_returns_404_for_unknown_room_id(client_and_main):
