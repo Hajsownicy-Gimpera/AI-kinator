@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useTheme } from '../../context/ThemeContext';
-import AIAvatar from '../AIAvatar/AIAvatar';
+import PlayerAvatar from '../PlayerAvatar/PlayerAvatar';
 
 const WinScreenContainer = styled.div`
   display: flex;
@@ -131,11 +131,7 @@ const WinScreen = ({ roomState, conversationHistory }) => {
     <WinScreenContainer theme={theme}>
       <WinContainer theme={theme}>
         <AvatarWrapper theme={theme}>
-          <AIAvatar 
-            isSubmitting={false} 
-            gamePhase="ended" 
-            isWinner={true}
-          />
+          <PlayerAvatar avatarIndex={1} size="150px" />
         </AvatarWrapper>
         
         <WinEmoji theme={theme}>🎉</WinEmoji>

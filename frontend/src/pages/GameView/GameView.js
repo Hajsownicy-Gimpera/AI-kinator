@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import WinScreen from '../../components/WinScreen/WinScreen';
-import AIAvatar from '../../components/AIAvatar/AIAvatar';
+import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import ThemeToggle from '../../components/ThemeToggle/ThemeToggle';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -356,7 +356,9 @@ const GameView = () => {
   const [error, setError] = useState(null);
   const [question, setQuestion] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [avatarIndex, setAvatarIndex] = useState(0);
   const messagesEndRef = useRef(null);
+  const avatarThinkingStartTimeRef = useRef(null);
 
   // Fetch room state callback (without conversation history)
   const fetchRoomState = useCallback(async () => {
@@ -422,6 +424,30 @@ const GameView = () => {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [conversationHistory]);
+
+  // Handle avatar changes based on submission state
+  useEffect(() => {
+    if (submitting) {
+      // When submitting, start with random thinking avatar (3 or 4)
+      const randomThinkingAvatar = Math.random() < 0.5 ? 3 : 4;
+      setAvatarIndex(randomThinkingAvatar);
+      // Record when thinking started
+      avatarThinkingStartTimeRef.current = Date.now();
+    } else if (avatarThinkingStartTimeRef.current !== null) {
+      // When response comes back, ensure minimum 1 second thinking time
+      const elapsedTime = Date.now() - avatarThinkingStartTimeRef.current;
+      const remainingTime = Math.max(0, 1000 - elapsedTime);
+
+      const timer = setTimeout(() => {
+        // Change back to idle state (0 or 1)
+        const randomIdleAvatar = Math.random() < 0.5 ? 0 : 1;
+        setAvatarIndex(randomIdleAvatar);
+        avatarThinkingStartTimeRef.current = null;
+      }, remainingTime);
+
+      return () => clearTimeout(timer);
+    }
+  }, [submitting]);
 
   const handleSubmitQuestion = async (e) => {
     e.preventDefault();
@@ -599,13 +625,9 @@ const GameView = () => {
 
       {/* Main container */}
       <GameContainer theme={theme}>
-        {/* Left side - AI Avatar */}
+        {/* Left side - Player Avatar */}
         <GameLeft theme={theme}>
-          <AIAvatar 
-            isSubmitting={submitting} 
-            gamePhase={roomState.game_phase} 
-            isWinner={roomState.winner_id}
-          />
+          <PlayerAvatar avatarIndex={avatarIndex} size="150px" />
           <ImagePlaceholder theme={theme}>
             🎭 Zgadnij postać!
           </ImagePlaceholder>
