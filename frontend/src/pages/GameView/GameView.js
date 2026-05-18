@@ -90,6 +90,8 @@ const GameContainer = styled.div`
   gap: ${props => props.theme.spacing.lg};
   padding: ${props => props.theme.spacing.xl};
   overflow: hidden;
+  align-items: center;
+  justify-content: center;
 
   @media (max-width: 1024px) {
     flex-direction: column;
@@ -98,49 +100,12 @@ const GameContainer = styled.div`
   }
 `;
 
-const GameLeft = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 25%;
-  background-color: ${props => props.theme.colors.cardBackground};
-  border-radius: ${props => props.theme.borderRadius.lg};
-  box-shadow: 0 8px 24px ${props => props.theme.colors.shadowMedium};
-  border: 2px solid ${props => props.theme.colors.accent};
-  padding: ${props => props.theme.spacing.xl};
-  gap: ${props => props.theme.spacing.lg};
-
-  @media (max-width: 1024px) {
-    flex: 0 0 auto;
-    max-height: 200px;
-  }
-`;
-
-const ImagePlaceholder = styled.div`
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, ${props => props.theme.colors.backgroundSecondary} 0%, ${props => props.theme.colors.cardBackground} 100%);
-  border-radius: ${props => props.theme.borderRadius.md};
-  font-size: 18px;
-  color: ${props => props.theme.colors.textSecondary};
-  text-align: center;
-  font-weight: 500;
-`;
-
 const GameMiddle = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 0 0 30%;
-  background-color: ${props => props.theme.colors.cardBackground};
-  border-radius: ${props => props.theme.borderRadius.lg};
-  box-shadow: 0 8px 24px ${props => props.theme.colors.shadowMedium};
-  border: 2px solid ${props => props.theme.colors.accent};
+  flex: 0 0 auto;
   padding: ${props => props.theme.spacing.xl};
 
   @media (max-width: 1024px) {
@@ -153,6 +118,8 @@ const GameRight = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
+  max-width: 500px;
+  min-height: 800px;
   background-color: ${props => props.theme.colors.cardBackground};
   border-radius: ${props => props.theme.borderRadius.lg};
   box-shadow: 0 8px 24px ${props => props.theme.colors.shadowMedium};
@@ -162,6 +129,7 @@ const GameRight = styled.div`
   @media (max-width: 1024px) {
     flex: 1;
     min-height: 300px;
+    max-width: 100%;
   }
 `;
 
@@ -400,7 +368,6 @@ const GameView = () => {
         throw new Error(`Failed to fetch room state: ${response.statusText}`);
       }
       const data = await response.json();
-      // Set room state - polling only updates game status, never conversation history
       setRoomState(data);
     } catch (err) {
       setError(err.message);
@@ -419,7 +386,6 @@ const GameView = () => {
           throw new Error(`Failed to fetch history: ${response.statusText}`);
         }
         const data = await response.json();
-        // Separate conversation history from room state
         const { conversation_history, ...stateWithoutHistory } = data;
         setRoomState(stateWithoutHistory);
         console.log("new conversation")
@@ -437,7 +403,6 @@ const GameView = () => {
 
   // Poll room state every 3 seconds (but NOT when game is won)
   useEffect(() => {
-    // Don't poll if game is already won
     if (roomState?.winner_id) {
       return;
     }
@@ -459,18 +424,14 @@ const GameView = () => {
   // Handle avatar changes based on submission state
   useEffect(() => {
     if (submitting) {
-      // When submitting, start with random thinking avatar (3 or 4)
       const randomThinkingAvatar = Math.random() < 0.5 ? 3 : 4;
       setAvatarIndex(randomThinkingAvatar);
-      // Record when thinking started
       avatarThinkingStartTimeRef.current = Date.now();
     } else if (avatarThinkingStartTimeRef.current !== null) {
-      // When response comes back, ensure minimum 1 second thinking time
       const elapsedTime = Date.now() - avatarThinkingStartTimeRef.current;
       const remainingTime = Math.max(0, 1000 - elapsedTime);
 
       const timer = setTimeout(() => {
-        // Change back to idle state (0 or 1)
         const randomIdleAvatar = Math.random() < 0.5 ? 0 : 1;
         setAvatarIndex(randomIdleAvatar);
         avatarThinkingStartTimeRef.current = null;
@@ -509,14 +470,12 @@ const GameView = () => {
 
       const responseData = await response.json();
 
-      // Add the new question and answer to conversation history
       setConversationHistory(prevHistory => [
         ...prevHistory,
         { role: 'player', question: question.trim() },
         { role: 'ai', answer: responseData.answer },
       ]);
 
-      // Clear input
       setQuestion('');
     } catch (err) {
       setError(err.message);
@@ -539,7 +498,6 @@ const GameView = () => {
       setSubmitting(true);
       setError(null);
       
-      // Real POST to /guess endpoint
       const response = await fetch(`${API_URL}/rooms/${roomId}/guess`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -562,18 +520,16 @@ const GameView = () => {
       const responseData = await response.json();
 
       if (responseData.correct) {
-        // Correct guess - update room state with winner_id
         setRoomState(prevState => ({
           ...prevState,
           winner_id: responseData.winner_id
         }));
         setError(null);
       } else {
-        // Incorrect guess - show message
         setError(responseData.message || 'To nie ta postać. Spróbuj jeszcze raz!');
       }
 
-      setQuestion(''); // wyczyść pole po zgadnięciu
+      setQuestion('');
     } catch (err) {
       setError(err.message);
       console.error('Error submitting guess:', err);
@@ -631,7 +587,6 @@ const GameView = () => {
     );
   }
 
-  // Show win screen if player won
   if (roomState.winner_id) {
     return <WinScreen roomState={roomState} conversationHistory={conversationHistory} />;
   }
@@ -656,13 +611,6 @@ const GameView = () => {
 
       {/* Main container */}
       <GameContainer theme={theme}>
-        {/* Left side - Image */}
-        <GameLeft theme={theme}>
-          <ImagePlaceholder theme={theme}>
-            🎭 Zgadnij postać!
-          </ImagePlaceholder>
-        </GameLeft>
-
         {/* Middle - Player Avatar */}
         <GameMiddle theme={theme}>
           <PlayerAvatar avatarIndex={avatarIndex} size="500px" />
