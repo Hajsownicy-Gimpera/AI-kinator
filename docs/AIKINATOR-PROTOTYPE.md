@@ -12,6 +12,8 @@
 - **FE-1** (2026-04-13): Frontend initialization + React
 - **FE-2** (2026-04-15): Home screen with game mode selection
 - **FE-3**: GameView component with polling
+- **FE-6** (2026-05-18): UI overhaul with styled-components, dark/light theme, ThemeContext, GameView redesign
+- **FE-7** (2026-05-18): Avatar animation system with smart timing, spritesheet-based rendering
 - **LLM-5**: Implement /guess endpoint with character validation
 - **FE-5**: Win screen + guess handler response logic
 - **DEVOPS-1** (2026-04-19): GitHub Actions CI workflow with backend/frontend tests
@@ -116,16 +118,27 @@ Nowe zadania według aneksu do specyfikacji. Skupiamy się na trybach wieloosobo
 
 ---
 
-## Task 2.5: Frontend – przebudowa UI (globalny overhaul)
+## Task 2.5: Frontend – przebudowa UI (globalny overhaul) ✅ COMPLETE
+
+**Status:** Implemented in FE-6 and FE-7 (2026-05-18)
 
 **Cel:** Nowy wygląd zgodny z wytycznymi: minimalistyczny, zaokrąglone rogi (border-radius: 12–16px), wyśrodkowanie, nowoczesna czcionka (np. Inter, Poppins), awatar AI.
 
-- Usuń niebiesko-różowy gradient. Zastosuj ciemne tło (#1a1a2e) z akcentem (np. #e94560).
-- Wszystkie przyciski i karty: border-radius: 12px, cień, brak ostrych krawędzi.
-- Wyśrodkuj kontener główny (max-width: 600px, margin auto).
-- Dodaj awatar AI (stały element graficzny – może być obrazek duszka/genie) w górnej części ekranu gry. Awatar powinien reagować: neutralny wyraz przy oczekiwaniu, myślący podczas odpowiedzi, zadowolony po wygranej. Można to uprościć do zmiany ikony/tekstu.
-- Ujednolić styl ekranu logowania/rejestracji (jeśli istnieje) z ekranem gry.
-- Zastosuj czcionkę z Google Fonts (import w index.html).
+**Completed Changes:**
+- ✅ Usuniętniebiesko-różowy gradient. Zastosowano ciemne tło (#1a1a2e) z akcentem (#e94560).
+- ✅ Wszystkie przyciski i karty: border-radius: 12px, cień, brak ostrych krawędzi.
+- ✅ Wyśrodkowany kontener główny z responsywnym layoutem (flex 70%/30% split).
+- ✅ Dodany awatar AI (stały element graficzny – spritesheet duszka) w lewej części ekranu gry. Awatar reaguje: neutralny wyraz przy oczekiwaniu (indeksy 0-1), myślący podczas odpowiedzi (indeksy 3-4), zadowolony po wygranej (indeks 2).
+- ✅ Ujednolicony styl ekranu gry z wytycznymi UI (zaokrąglone rogi, cienie, nowoczesny design).
+- ✅ Zastosowana czcionka z Google Fonts (import w index.html).
+- ✅ Dodany system motywów (dark/light) z ThemeContext i przyciskiem ThemeToggle.
+- ✅ Całe GameView + komponenty konwertowane na styled-components.
+
+**Implementation Details:**
+- **Theme System:** ThemeContext z darkTheme i lightTheme konfiguracją
+- **Avatar:** Spritesheet `Avatars_background_free.png` z 6 frames (3×2 grid)
+- **Animation:** Inteligentny system timing z `avatarThinkingStartTimeRef` zapewniający minimum 1-sekundowy thinking state
+- **Responsive:** Układ dostosowuje się na ekranach < 1024px (vertical stack)
 
 ---
 
