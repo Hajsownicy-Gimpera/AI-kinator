@@ -61,7 +61,7 @@ const RoomIdBadge = styled.div`
 const BackButton = styled.button`
   background-color: ${props => props.theme.colors.accent};
   color: ${props => props.theme.colors.buttonText};
-  border: none;
+  border: 2px solid ${props => props.theme.colors.accent};
   padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
   border-radius: ${props => props.theme.borderRadius.md};
   cursor: pointer;
@@ -69,10 +69,14 @@ const BackButton = styled.button`
   font-weight: 600;
   transition: all 0.3s ease;
   font-family: ${props => props.theme.fonts.primary};
+  box-shadow: 0 2px 8px ${props => props.theme.colors.shadowMedium};
 
   &:hover {
-    background-color: ${props => props.theme.colors.accentDark};
+    background-color: ${props => props.theme.colors.cardBackground};
+    color: ${props => props.theme.colors.accent};
+    border-color: ${props => props.theme.colors.accent};
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px ${props => props.theme.colors.shadowMedium};
   }
 
   &:active {
@@ -99,10 +103,11 @@ const GameLeft = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 0 0 30%;
+  flex: 0 0 25%;
   background-color: ${props => props.theme.colors.cardBackground};
   border-radius: ${props => props.theme.borderRadius.lg};
   box-shadow: 0 8px 24px ${props => props.theme.colors.shadowMedium};
+  border: 2px solid ${props => props.theme.colors.accent};
   padding: ${props => props.theme.spacing.xl};
   gap: ${props => props.theme.spacing.lg};
 
@@ -126,6 +131,24 @@ const ImagePlaceholder = styled.div`
   font-weight: 500;
 `;
 
+const GameMiddle = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30%;
+  background-color: ${props => props.theme.colors.cardBackground};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  box-shadow: 0 8px 24px ${props => props.theme.colors.shadowMedium};
+  border: 2px solid ${props => props.theme.colors.accent};
+  padding: ${props => props.theme.spacing.xl};
+
+  @media (max-width: 1024px) {
+    flex: 0 0 auto;
+    max-height: 200px;
+  }
+`;
+
 const GameRight = styled.div`
   display: flex;
   flex-direction: column;
@@ -133,6 +156,7 @@ const GameRight = styled.div`
   background-color: ${props => props.theme.colors.cardBackground};
   border-radius: ${props => props.theme.borderRadius.lg};
   box-shadow: 0 8px 24px ${props => props.theme.colors.shadowMedium};
+  border: 2px solid ${props => props.theme.colors.accent};
   overflow: hidden;
 
   @media (max-width: 1024px) {
@@ -244,17 +268,19 @@ const ChatInputArea = styled.form`
 const QuestionInput = styled.input`
   flex: 1;
   padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
-  border: 2px solid ${props => props.theme.colors.inputBorder};
+  border: 2px solid ${props => props.theme.colors.accent};
   border-radius: ${props => props.theme.borderRadius.md};
   font-size: 14px;
   font-family: ${props => props.theme.fonts.primary};
   background-color: ${props => props.theme.colors.inputBackground};
   color: ${props => props.theme.colors.text};
   transition: border-color 0.3s ease;
+  box-shadow: 0 2px 4px ${props => props.theme.colors.shadowLight};
 
   &:focus {
     outline: none;
     border-color: ${props => props.theme.colors.inputBorderFocus};
+    box-shadow: 0 4px 8px ${props => props.theme.colors.shadowMedium};
   }
 
   &::placeholder {
@@ -274,7 +300,7 @@ const QuestionInput = styled.input`
 const SendButton = styled.button`
   background-color: ${props => props.theme.colors.accent};
   color: ${props => props.theme.colors.buttonText};
-  border: none;
+  border: 2px solid ${props => props.theme.colors.accent};
   padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
   border-radius: ${props => props.theme.borderRadius.md};
   cursor: pointer;
@@ -283,10 +309,14 @@ const SendButton = styled.button`
   transition: all 0.3s ease;
   white-space: nowrap;
   font-family: ${props => props.theme.fonts.primary};
+  box-shadow: 0 2px 8px ${props => props.theme.colors.shadowMedium};
 
   &:hover {
-    background-color: ${props => props.theme.colors.accentDark};
+    background-color: ${props => props.theme.colors.cardBackground};
+    color: ${props => props.theme.colors.accent};
+    border-color: ${props => props.theme.colors.accent};
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px ${props => props.theme.colors.shadowMedium};
   }
 
   &:active {
@@ -295,6 +325,7 @@ const SendButton = styled.button`
 
   &:disabled {
     background-color: ${props => props.theme.colors.textSecondary};
+    border-color: ${props => props.theme.colors.textSecondary};
     cursor: not-allowed;
     opacity: 0.6;
   }
@@ -625,13 +656,17 @@ const GameView = () => {
 
       {/* Main container */}
       <GameContainer theme={theme}>
-        {/* Left side - Player Avatar */}
+        {/* Left side - Image */}
         <GameLeft theme={theme}>
-          <PlayerAvatar avatarIndex={avatarIndex} size="150px" />
           <ImagePlaceholder theme={theme}>
             🎭 Zgadnij postać!
           </ImagePlaceholder>
         </GameLeft>
+
+        {/* Middle - Player Avatar */}
+        <GameMiddle theme={theme}>
+          <PlayerAvatar avatarIndex={avatarIndex} size="500px" />
+        </GameMiddle>
 
         {/* Right side - Chat */}
         <GameRight theme={theme}>

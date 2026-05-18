@@ -14,85 +14,16 @@ const AppContainer = styled.div`
 
 const HomeContainer = styled.div`
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  flex-direction: row;
+  gap: ${props => props.theme.spacing.xl};
   min-height: 100vh;
   background-color: ${props => props.theme.colors.background};
   color: ${props => props.theme.colors.text};
   font-family: ${props => props.theme.fonts.primary};
   padding: ${props => props.theme.spacing.xl};
-  gap: ${props => props.theme.spacing.xl};
-`;
-
-const HomeHeader = styled.div`
-  text-align: center;
-  width: 100%;
-  max-width: 600px;
-  display: flex;
-  flex-direction: column;
+  position: relative;
   align-items: center;
-  gap: ${props => props.theme.spacing.lg};
-`;
-
-const HomeTitle = styled.h1`
-  font-size: 3.5em;
-  margin: 0 0 ${props => props.theme.spacing.lg} 0;
-  color: ${props => props.theme.colors.text};
-  font-family: ${props => props.theme.fonts.heading};
-  font-weight: 700;
-`;
-
-const HomeSubtitle = styled.p`
-  font-size: 1.2em;
-  margin: 0;
-  color: ${props => props.theme.colors.textSecondary};
-  font-weight: 500;
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${props => props.theme.spacing.md};
-  width: 100%;
-  max-width: 300px;
-`;
-
-const ModeButton = styled.button`
-  padding: ${props => props.theme.spacing.lg} ${props => props.theme.spacing.xl};
-  font-size: 1.1em;
-  font-weight: 600;
-  border: none;
-  border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.theme.colors.accent};
-  color: ${props => props.theme.colors.buttonText};
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px ${props => props.theme.colors.shadowMedium};
-  font-family: ${props => props.theme.fonts.primary};
-
-  &:hover {
-    background-color: ${props => props.theme.colors.accentDark};
-    box-shadow: 0 8px 16px ${props => props.theme.colors.shadowHeavy};
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    background-color: ${props => props.theme.colors.textSecondary};
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-`;
-
-const LoadingText = styled.p`
-  font-size: 1em;
-  color: ${props => props.theme.colors.accent};
-  font-weight: 500;
-  margin: ${props => props.theme.spacing.lg} 0 0 0;
+  justify-content: center;
 `;
 
 const ToggleContainer = styled.div`
@@ -101,10 +32,202 @@ const ToggleContainer = styled.div`
   right: ${props => props.theme.spacing.xl};
 `;
 
+const ColumnSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.lg};
+  flex: 0 0 auto;
+`;
+
+const RowContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: ${props => props.theme.spacing.lg};
+`;
+
+const GameModeCard = styled.div`
+  background-color: ${props => props.theme.colors.cardBackground};
+  padding: ${props => props.theme.spacing.lg} ${props => props.theme.spacing.xl};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  box-shadow: 0 4px 12px ${props => props.theme.colors.shadowMedium};
+  border: 2px solid ${props => props.theme.colors.accent};
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.md};
+`;
+
+const JoinGameCard = styled(GameModeCard)`
+  width: calc(2 * 300px + ${props => props.theme.spacing.lg});
+  border: 2px solid ${props => props.theme.colors.accent};
+  box-shadow: 0 2px 8px ${props => props.theme.colors.shadowMedium};
+`;
+
+const InputRow = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.md};
+  width: 100%;
+`;
+
+const DiceButton = styled.button`
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  font-size: 1.2em;
+  border: 2px solid ${props => props.theme.colors.accent};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.cardBackground};
+  color: ${props => props.theme.colors.accent};
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px ${props => props.theme.colors.shadowLight};
+
+  &:hover {
+    background-color: ${props => props.theme.colors.accent};
+    color: ${props => props.theme.colors.buttonText};
+    border-color: ${props => props.theme.colors.accent};
+    box-shadow: 0 4px 8px ${props => props.theme.colors.shadowMedium};
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const FlexGrow = styled.div`
+  flex-grow: 1;
+`;
+
+const GameModeTitle = styled.h2`
+  margin: 0 0 ${props => props.theme.spacing.sm} 0;
+  font-size: 1.5em;
+  color: ${props => props.theme.colors.text};
+  font-family: ${props => props.theme.fonts.heading};
+  font-weight: 700;
+`;
+
+const GameModeDescription = styled.p`
+  margin: 0 0 ${props => props.theme.spacing.md} 0;
+  font-size: 0.95em;
+  color: ${props => props.theme.colors.textSecondary};
+  line-height: 1.5;
+`;
+
+const NicknameInput = styled.input`
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  border: 2px solid ${props => props.theme.colors.accent};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: 0.95em;
+  font-family: ${props => props.theme.fonts.primary};
+  background-color: ${props => props.theme.colors.inputBackground};
+  color: ${props => props.theme.colors.text};
+  box-shadow: 0 2px 4px ${props => props.theme.colors.shadowLight};
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.inputBorderFocus};
+    box-shadow: 0 4px 8px ${props => props.theme.colors.shadowMedium};
+  }
+
+  &::placeholder {
+    color: ${props => props.theme.colors.textSecondary};
+  }
+`;
+
+const JoinGameInput = styled.input`
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  border: 2px solid ${props => props.theme.colors.accent};
+  border-radius: ${props => props.theme.borderRadius.md};
+  font-size: 0.95em;
+  font-family: ${props => props.theme.fonts.primary};
+  background-color: ${props => props.theme.colors.inputBackground};
+  color: ${props => props.theme.colors.text};
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 2px 4px ${props => props.theme.colors.shadowLight};
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.inputBorderFocus};
+    box-shadow: 0 4px 8px ${props => props.theme.colors.shadowMedium};
+  }
+
+  &::placeholder {
+    color: ${props => props.theme.colors.textSecondary};
+  }
+`;
+
+const ModeButton = styled.button`
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  font-size: 1em;
+  font-weight: 600;
+  border: 2px solid ${props => props.theme.colors.accent};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: ${props => props.theme.colors.accent};
+  color: ${props => props.theme.colors.buttonText};
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: ${props => props.theme.fonts.primary};
+  box-shadow: 0 2px 8px ${props => props.theme.colors.shadowMedium};
+
+  &:hover {
+    background-color: ${props => props.theme.colors.cardBackground};
+    color: ${props => props.theme.colors.accent};
+    border-color: ${props => props.theme.colors.accent};
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px ${props => props.theme.colors.shadowMedium};
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background-color: ${props => props.theme.colors.textSecondary};
+    border-color: ${props => props.theme.colors.textSecondary};
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+`;
+
+const AvatarContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+`;
+
+const LoadingText = styled.p`
+  font-size: 1em;
+  color: ${props => props.theme.colors.accent};
+  font-weight: 500;
+  text-align: center;
+  position: absolute;
+  bottom: ${props => props.theme.spacing.xl};
+`;
+
 const Home = () => {
   const [loading, setLoading] = useState(false);
+  const [nickname, setNickname] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [joinNickname, setJoinNickname] = useState('');
   const navigate = useNavigate();
   const { theme } = useTheme();
+
+  const randomNicknames = [
+    'Shadow', 'Phoenix', 'Dragon', 'Tiger', 'Eagle', 'Wolf', 'Ninja', 'Knight',
+    'Wizard', 'Sage', 'Hunter', 'Ranger', 'Paladin', 'Rogue', 'Mage', 'Bard',
+    'Warrior', 'Archer', 'Scholar', 'Mystic'
+  ];
+
+  const generateRandomNickname = () => {
+    const randomNick = randomNicknames[Math.floor(Math.random() * randomNicknames.length)];
+    setJoinNickname(randomNick);
+  };
 
   const createRoom = async (mode) => {
     try {
@@ -131,29 +254,140 @@ const Home = () => {
     }
   };
 
+  const handleJoinGame = () => {
+    if (!joinCode.trim()) {
+      alert("Please enter a room code");
+      return;
+    }
+    if (!joinNickname.trim()) {
+      alert("Please enter a nickname");
+      return;
+    }
+    navigate(`/game/${joinCode}`);
+  };
+
+  const handlePlaySolo = () => {
+    if (nickname.trim()) {
+      createRoom('solo');
+    } else {
+      alert("Please enter a nickname");
+    }
+  };
+
   return (
     <HomeContainer theme={theme}>
       <ToggleContainer theme={theme}>
         <ThemeToggle />
       </ToggleContainer>
-      <HomeHeader theme={theme}>
-        <PlayerAvatar size="150px" avatarIndex={0} />
-        <HomeTitle theme={theme}>AI-kinator</HomeTitle>
-        <HomeSubtitle theme={theme}>Wybierz tryb gry</HomeSubtitle>
-      </HomeHeader>
-      <ButtonContainer theme={theme}>
-        <ModeButton theme={theme} disabled={loading} onClick={() => createRoom('solo')}>
-          Solo
-        </ModeButton>
-        <ModeButton theme={theme} disabled={loading} onClick={() => createRoom('battle_royale')}>
-          Battle Royale
-        </ModeButton>
-        <ModeButton theme={theme} disabled={loading} onClick={() => createRoom('duel')}>
-          Duel
-        </ModeButton>
-      </ButtonContainer>
 
-      {loading && <LoadingText theme={theme}>Tworzenie pokoju...</LoadingText>}
+      {/* Left Column - Solo Game */}
+      <ColumnSection theme={theme}>
+        <GameModeCard theme={theme}>
+          <GameModeTitle theme={theme}>Solo</GameModeTitle>
+          <GameModeDescription theme={theme}>
+            Play against the AI in a solo game. Challenge yourself to guess the secret character with your questions.
+          </GameModeDescription>
+          <NicknameInput
+            theme={theme}
+            type="text"
+            placeholder="Enter your nickname..."
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            disabled={loading}
+          />
+          <ModeButton
+            theme={theme}
+            disabled={loading}
+            onClick={handlePlaySolo}
+          >
+            Play Solo
+          </ModeButton>
+        </GameModeCard>
+      </ColumnSection>
+
+      {/* Center - Avatar */}
+      <AvatarContainer theme={theme}>
+        <PlayerAvatar size="400px" avatarIndex={5} />
+      </AvatarContainer>
+
+      {/* Right Column - Join Game and Multiplayer Modes */}
+      <ColumnSection theme={theme}>
+        {/* Join Game Card */}
+        <JoinGameCard theme={theme}>
+          <GameModeTitle theme={theme}>Join Game</GameModeTitle>
+          <JoinGameInput
+            theme={theme}
+            type="text"
+            placeholder="Enter room code..."
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value)}
+            disabled={loading}
+          />
+          <InputRow theme={theme}>
+            <NicknameInput
+              theme={theme}
+              type="text"
+              placeholder="Enter your nickname..."
+              value={joinNickname}
+              onChange={(e) => setJoinNickname(e.target.value)}
+              disabled={loading}
+              style={{ flex: 1 }}
+            />
+            <DiceButton
+              theme={theme}
+              onClick={generateRandomNickname}
+              disabled={loading}
+              title="Generate random nickname"
+            >
+              🎲
+            </DiceButton>
+          </InputRow>
+          <ModeButton
+            theme={theme}
+            onClick={handleJoinGame}
+            disabled={loading || !joinCode.trim() || !joinNickname.trim()}
+          >
+            Join
+          </ModeButton>
+        </JoinGameCard>
+
+        {/* Battle Royale and Duel Row */}
+        <RowContainer theme={theme}>
+          {/* Duel Card */}
+          <GameModeCard theme={theme}>
+            <GameModeTitle theme={theme}>Duel</GameModeTitle>
+            <GameModeDescription theme={theme}>
+              Challenge a friend to a head-to-head match. Who will guess first?
+            </GameModeDescription>
+            <FlexGrow theme={theme} />
+            <ModeButton
+              theme={theme}
+              disabled={loading}
+              onClick={() => createRoom('duel')}
+            >
+              Create Duel
+            </ModeButton>
+          </GameModeCard>
+
+          {/* Battle Royale Card */}
+          <GameModeCard theme={theme}>
+            <GameModeTitle theme={theme}>Battle Royale</GameModeTitle>
+            <GameModeDescription theme={theme}>
+              Compete against multiple players. The first to guess wins!
+            </GameModeDescription>
+            <FlexGrow theme={theme} />
+            <ModeButton
+              theme={theme}
+              disabled={loading}
+              onClick={() => createRoom('battle_royale')}
+            >
+              Create Battle Royale
+            </ModeButton>
+          </GameModeCard>
+        </RowContainer>
+      </ColumnSection>
+
+      {loading && <LoadingText theme={theme}>Creating room...</LoadingText>}
     </HomeContainer>
   );
 };
