@@ -4,6 +4,7 @@ import axios from 'axios';
 import styled from 'styled-components';
 import GameView from './pages/GameView/GameView';
 import ThemeToggle from './components/ThemeToggle/ThemeToggle';
+import PlayerAvatar from './components/PlayerAvatar/PlayerAvatar';
 import { useTheme } from './context/ThemeContext';
 
 const AppContainer = styled.div`
@@ -28,6 +29,10 @@ const HomeHeader = styled.div`
   text-align: center;
   width: 100%;
   max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${props => props.theme.spacing.lg};
 `;
 
 const HomeTitle = styled.h1`
@@ -131,8 +136,9 @@ const Home = () => {
       <ToggleContainer theme={theme}>
         <ThemeToggle />
       </ToggleContainer>
-      <HomeHeader>
-        <HomeTitle theme={theme}>🎮 AI-kinator 🎮</HomeTitle>
+      <HomeHeader theme={theme}>
+        <PlayerAvatar size="150px" avatarIndex={0} />
+        <HomeTitle theme={theme}>AI-kinator</HomeTitle>
         <HomeSubtitle theme={theme}>Wybierz tryb gry</HomeSubtitle>
       </HomeHeader>
       <ButtonContainer theme={theme}>

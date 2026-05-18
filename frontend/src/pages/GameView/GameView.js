@@ -37,6 +37,12 @@ const GameTitle = styled.h1`
   font-family: ${props => props.theme.fonts.heading};
 `;
 
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.lg};
+`;
+
 const HeaderRight = styled.div`
   display: flex;
   align-items: center;
@@ -176,6 +182,7 @@ const Message = styled.div`
   margin-bottom: ${props => props.theme.spacing.sm};
   animation: slideIn 0.3s ease;
   justify-content: ${props => props.$isPlayer ? 'flex-end' : 'flex-start'};
+  width: 100%;
 
   @keyframes slideIn {
     from {
@@ -194,6 +201,9 @@ const MessageBubble = styled.div`
   padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
   border-radius: ${props => props.theme.borderRadius.md};
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
   font-size: 14px;
   line-height: 1.4;
   background-color: ${props => props.$isPlayer ? props.theme.colors.playerMessage : props.theme.colors.aiMessage};
@@ -208,11 +218,15 @@ const MessageLabel = styled.div`
   color: ${props => props.theme.colors.textSecondary};
   margin-bottom: ${props => props.theme.spacing.sm};
   font-weight: 600;
+  align-items: ${props => props.$isPlayer ? 'flex-end' : 'flex-start'};
 `;
 
 const MessageContent = styled.div`
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  align-items: ${props => props.$isPlayer ? 'flex-end' : 'flex-start'};
 `;
 
 const ChatInputArea = styled.form`
@@ -328,9 +342,8 @@ const ErrorMessage = styled.div`
 `;
 
 const ToggleWrapper = styled.div`
-  position: absolute;
-  top: ${props => props.theme.spacing.lg};
-  right: ${props => props.theme.spacing.xl};
+  display: flex;
+  align-items: center;
 `;
 
 const GameView = () => {
@@ -516,11 +529,13 @@ const GameView = () => {
     return (
       <GameViewContainer theme={theme}>
         <GameHeader theme={theme}>
-          <GameTitle theme={theme}>AI-kinator</GameTitle>
-          <HeaderRight theme={theme}>
+          <HeaderLeft theme={theme}>
+            <GameTitle theme={theme}>AI-kinator</GameTitle>
             <ToggleWrapper theme={theme}>
               <ThemeToggle />
             </ToggleWrapper>
+          </HeaderLeft>
+          <HeaderRight theme={theme}>
             <BackButton theme={theme} onClick={() => navigate('/')}>
               ← Powrót do menu
             </BackButton>
@@ -538,11 +553,13 @@ const GameView = () => {
     return (
       <GameViewContainer theme={theme}>
         <GameHeader theme={theme}>
-          <GameTitle theme={theme}>AI-kinator</GameTitle>
-          <HeaderRight theme={theme}>
+          <HeaderLeft theme={theme}>
+            <GameTitle theme={theme}>AI-kinator</GameTitle>
             <ToggleWrapper theme={theme}>
               <ThemeToggle />
             </ToggleWrapper>
+          </HeaderLeft>
+          <HeaderRight theme={theme}>
             <BackButton theme={theme} onClick={() => navigate('/')}>
               ← Powrót do menu
             </BackButton>
@@ -566,12 +583,14 @@ const GameView = () => {
     <GameViewContainer theme={theme}>
       {/* Header */}
       <GameHeader theme={theme}>
-        <GameTitle theme={theme}>AI-kinator</GameTitle>
-        <HeaderRight theme={theme}>
-          <RoomIdBadge theme={theme}>ID: {roomState.room_id}</RoomIdBadge>
+        <HeaderLeft theme={theme}>
+          <GameTitle theme={theme}>AI-kinator</GameTitle>
           <ToggleWrapper theme={theme}>
             <ThemeToggle />
           </ToggleWrapper>
+        </HeaderLeft>
+        <HeaderRight theme={theme}>
+          <RoomIdBadge theme={theme}>ID: {roomState.room_id}</RoomIdBadge>
           <BackButton theme={theme} onClick={() => navigate('/')}>
             ← Powrót do menu
           </BackButton>
@@ -603,8 +622,8 @@ const GameView = () => {
             {conversationHistory && conversationHistory.length > 0 ? (
               conversationHistory.map((entry, idx) => (
                 <Message key={idx} $isPlayer={entry.role === 'player'} theme={theme}>
-                  <MessageContent theme={theme}>
-                    <MessageLabel theme={theme}>
+                  <MessageContent theme={theme} $isPlayer={entry.role === 'player'}>
+                    <MessageLabel theme={theme} $isPlayer={entry.role === 'player'}>
                       {entry.role === 'player' ? '🧑 Ty' : '🤖 AI-kinator'}
                     </MessageLabel>
                     <MessageBubble $isPlayer={entry.role === 'player'} theme={theme}>
