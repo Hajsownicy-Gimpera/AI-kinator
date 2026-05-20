@@ -1,92 +1,257 @@
-.App {
-  text-align: center;
+/* Layout and Structural Containers */
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  
+  /* 1. Set a large background scale size so it can drift */
+  background: linear-gradient(-45deg, #0f0c20, #2b1055, #591a75, #0f0c20);
+  background-size: 400% 400%;
+  
+  /* 2. Call the custom animation defined below */
+  animation: gradientShift 30s ease infinite;
+  color: #ffffff;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* 3. The logic driving the background movement */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 25%;
+  }
+  50% {
+    background-position: 100% 60%;
+  }
+  100% {
+    background-position: 0% 25%;
+  }
+}
+.main-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  gap: 35px;
 }
 
-.App h1 {
-  margin: 0 0 20px 0;
-  font-size: 3em;
-}
-
-.App h2 {
-  margin: 20px 0;
-  font-size: 1.5em;
-}
-
-.success {
-  background-color: #4caf50;
-  padding: 20px;
-  border-radius: 8px;
-  margin: 20px;
-}
-
-.error {
-  background-color: #f44336;
-  padding: 20px;
-  border-radius: 8px;
-  margin: 20px;
-}
-
-.error button {
-  background-color: white;
-  color: #f44336;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 10px;
-  font-weight: bold;
-}
-
-.error button:hover {
-  background-color: #f8f9fa;
-}
-
-pre {
-  background-color: #1e1e1e;
-  padding: 15px;
-  border-radius: 4px;
-  overflow-x: auto;
-  text-align: left;
-  font-size: 0.8em;
-}
-
-.button-container {
+/* Header Section */
+.header-section {
   display: flex;
-  gap: 15px;
-  margin-top: 20px;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.brand-title {
+  font-size: 2.4rem;
+  font-weight: 1300;
+  letter-spacing: 0.5px;
+}
+
+/* Profile / Identity Area */
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background-color: rgba(112, 15, 247, 0.04);
+  padding: 24px;
+  border-radius: 16px;
+  border: 2px solid #700ff7;
+}
+
+.profile-inputs {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-label {
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* 3-Column Clean Dynamic Grid */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+  width: 100%;
+}
+
+/* Responsive collapse on smaller displays */
+@media (max-width: 900px) {
+  .action-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.game-card {
+  padding: 30px;
+  border-radius: 16px;
+  border: 2px solid #700ff7;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 280px;
+
+  /* Frosted glass style */
+  background-color: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px); 
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  
+  color: #ffffff;
+}
+
+/* The magic anchor wrapper */
+.card-footer {
+  margin-top: auto; 
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Keeps a consistent space between the input and the button */
+  width: 100%;
+}
+
+.card-spacer {
+  flex-grow: 1;
+}
+
+.game-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.game-description {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #bab7ca;
+  line-height: 1.6;
+}
+
+/* Unified Inputs Elements */
+.input-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 450px;
+}
+
+.base-input {
+  padding: 14px 18px;
+  border: 2px solid #700ff7;
+  background-color: #6204b0;
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.base-input::placeholder {
+  color: #bab7ca; /* Makes it a vibrant purple on focus */
+
+}
+
+.base-input:focus {
+  outline: none;
+  border-color: #9034f1;
+  box-shadow: 0 0 0 4px rgba(144, 52, 241, 0.15);
+}
+
+.base-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Button & Stack Architecture */
+.button-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
 
 .mode-button {
-  background-color: #700ff7;
+  background-color: #6204b0;
   color: #f9f4ff;
-  border: none;
-  padding: 20px 40px;
-  font-size: 1.3rem;
-  font-weight: bold;
-  border-radius: 8px;
+  border: 2px solid #700ff7;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 8px rgba(112, 15, 247, 0.15);
+  width: 100%;
+}
+
+.mode-button, 
+.button-stack {
+  margin-top: auto; /* This acts like an anchor pushing it to the very bottom of the flex container */
 }
 
 .mode-button:hover:not(:disabled) {
-  background-color: #9034f1;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background-color: rgba(98, 4, 176, 0.4);
+  color: #f9f4ff;
+  transform: translateY(-4px);
+  border-color: #9034f1;
+  box-shadow: 0 0 0 4px rgba(144, 52, 241, 0.15);
+}
+
+.mode-button.secondary {
+  background-color: transparent;
+  color: #700ff7;
+}
+
+.mode-button.secondary:hover:not(:disabled) {
+  background-color: #700ff7;
+  color: #f9f4ff;
 }
 
 .mode-button:disabled {
-  background-color: #555;
-  color: #888;
+  background-color: transparent;
+  border-color: #e0e0e0;
+  color: #bab7ca;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.dice-button {
+  padding: 0 20px;
+  font-size: 1.4rem;
+  border: 2px solid #700ff7;
+  border-radius: 10px;
+  background-color: #6204b0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dice-button:hover:not(:disabled) {
+  outline: none;
+  border-color: #9034f1;
+  box-shadow: 0 0 0 4px rgba(144, 52, 241, 0.15);
+  transform: rotate(15deg);
+}
+
+.dice-button:active {
+  transform: scale(0.92);
+}
+
+/* Utility Animations/Labels */
+.loading-text {
+  font-size: 1.1rem;
+  color: #700ff7;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 10px;
 }

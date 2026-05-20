@@ -16,3 +16,11 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    # These two lines keep Create React App from immediately exiting inside Docker
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    # Changed from 'dev' to 'start' to match your package.json
+    command: npm run start

@@ -32,9 +32,7 @@ const AvatarContainer = styled.div`
   box-shadow: ${(props) => `0 4px 12px ${props.theme.colors.shadow}`};
   flex-shrink: 0;
 
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.1); /* Subtle "interaction" effect */
-  }
+
 `;
 
 export default function PlayerAvatar({ avatarIndex = 0, size = '120px', className }) {
