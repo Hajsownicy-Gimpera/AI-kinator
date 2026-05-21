@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import GameView from './pages/GameView/GameView';
-import ThemeToggle from './components/ThemeToggle/ThemeToggle';
 import PlayerAvatar from './components/PlayerAvatar/PlayerAvatar';
 import './App.css';
 
@@ -62,10 +61,9 @@ const Home = () => {
 
   return (
     <div className="main-content">
-      {/* Top Header / Theme Toggle */}
+      {/* Top Header */}
       <header className="header-section">
         <div className="brand-title">AI-Kinator</div>
-        {/*<ThemeToggle />*/}
       </header>
 
       {/* Profile & Unified Nickname Section */}
