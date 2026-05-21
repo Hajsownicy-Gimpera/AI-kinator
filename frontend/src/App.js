@@ -64,7 +64,7 @@ const Home = () => {
     <div className="main-content">
       {/* Top Header / Theme Toggle */}
       <header className="header-section">
-        <div className="brand-title">AI Kinator</div>
+        <div className="brand-title">AI-Kinator</div>
         {/*<ThemeToggle />*/}
       </header>
 

@@ -1,19 +1,44 @@
-/* Layout and Structural Containers */
+/* Colors used in the app
+  #ffffff                   - white
+  #e0e0e0                   - bright gray
+  #bab7ca                   - toned gray
+  #700ff7                   - violet outline
+  #9034f1                   - light violet outline (selected)
+  #6204b0                   - purple button default bg
+  #ff4444                   - error border
+  #ffaaaa                   - error text
+  #28a745                   - success text
+  #0f0c20                   - app bg gradient #1
+  #2b1055                   - app bg gradient #2
+  #591a75                   - app bg gradient #2
+
+  rgba(0, 0, 0, 0.2)        - navigation ribbon bg
+  rgba(0, 0, 0, 0.08)       - navigation ribbon border
+  rgba(0, 0, 0, 0.3)        - default container shadow
+  rgba(40, 167, 69, 0.2)    - success bg
+  rgba(40, 167, 69, 0.5)    - success border
+  rgba(98, 4, 176, 0.4)     - purple button default bg (translucent);
+  rgba(112, 15, 247, 0.15)  - default button shadow
+  rgba(112, 15, 247, 0.1)   - chat header bg  
+  rgba(112, 15, 247, 0.3)   - chat header border
+  rgba(144, 52, 241, 0.15)  - hovering / selected shadow
+  rgba(255, 255, 255, 0.03) - ice effect bg
+  rgba(255, 0, 0, 0.1)      - error bg
+*/
+
 .app-container {
   width: 100%;
   min-height: 100vh;
   box-sizing: border-box;
   
-  /* 1. Set a large background scale size so it can drift */
   background: linear-gradient(-45deg, #0f0c20, #2b1055, #591a75, #0f0c20);
   background-size: 400% 400%;
   
-  /* 2. Call the custom animation defined below */
   animation: gradientShift 30s ease infinite;
   color: #ffffff;
 }
 
-/* 3. The logic driving the background movement */
+/* background movement logic */
 @keyframes gradientShift {
   0% {
     background-position: 0% 25%;
@@ -34,7 +59,6 @@
   gap: 35px;
 }
 
-/* Header Section */
 .header-section {
   display: flex;
   justify-content: space-between;
@@ -54,7 +78,7 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  background-color: rgba(112, 15, 247, 0.04);
+  background-color: rgba(255, 255, 255, 0.03);
   padding: 24px;
   border-radius: 16px;
   border: 2px solid #700ff7;
@@ -100,20 +124,17 @@
   gap: 20px;
   min-height: 280px;
 
-  /* Frosted glass style */
   background-color: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px); 
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  
   color: #ffffff;
 }
 
-/* The magic anchor wrapper */
 .card-footer {
   margin-top: auto; 
   display: flex;
   flex-direction: column;
-  gap: 15px; /* Keeps a consistent space between the input and the button */
+  gap: 15px;
   width: 100%;
 }
 
@@ -134,7 +155,6 @@
   line-height: 1.6;
 }
 
-/* Unified Inputs Elements */
 .input-row {
   display: flex;
   gap: 12px;
@@ -155,8 +175,7 @@
 }
 
 .base-input::placeholder {
-  color: #bab7ca; /* Makes it a vibrant purple on focus */
-
+  color: #bab7ca;
 }
 
 .base-input:focus {
@@ -170,7 +189,6 @@
   cursor: not-allowed;
 }
 
-/* Button & Stack Architecture */
 .button-stack {
   display: flex;
   flex-direction: column;
@@ -180,7 +198,7 @@
 
 .mode-button {
   background-color: #6204b0;
-  color: #f9f4ff;
+  color: #ffffff;
   border: 2px solid #700ff7;
   padding: 14px 24px;
   font-size: 1rem;
@@ -194,25 +212,16 @@
 
 .mode-button, 
 .button-stack {
-  margin-top: auto; /* This acts like an anchor pushing it to the very bottom of the flex container */
+  margin-top: auto;
+  color: #e0e0e0;
 }
 
 .mode-button:hover:not(:disabled) {
   background-color: rgba(98, 4, 176, 0.4);
-  color: #f9f4ff;
+  color: #ffffff;
   transform: translateY(-4px);
   border-color: #9034f1;
   box-shadow: 0 0 0 4px rgba(144, 52, 241, 0.15);
-}
-
-.mode-button.secondary {
-  background-color: transparent;
-  color: #700ff7;
-}
-
-.mode-button.secondary:hover:not(:disabled) {
-  background-color: #700ff7;
-  color: #f9f4ff;
 }
 
 .mode-button:disabled {
@@ -249,7 +258,6 @@
   transform: scale(0.92);
 }
 
-/* Utility Animations/Labels */
 .loading-text {
   font-size: 1.1rem;
   color: #700ff7;
