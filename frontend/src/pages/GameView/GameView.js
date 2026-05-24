@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import WinScreen from '../../components/WinScreen/WinScreen';
+import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import './GameView.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -14,7 +15,10 @@ const GameView = () => {
   const [error, setError] = useState(null);
   const [question, setQuestion] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [avatarIndex, setAvatarIndex] = useState(0);
   const messagesEndRef = useRef(null);
+  const avatarThinkingStartTimeRef = useRef(null);
+  const [copied, setCopied] = useState(false);
 
   // Fetch room state callback (without conversation history)
   const fetchRoomState = useCallback(async () => {
@@ -25,7 +29,6 @@ const GameView = () => {
         throw new Error(`Failed to fetch room state: ${response.statusText}`);
       }
       const data = await response.json();
-      // Set room state - polling only updates game status, never conversation history
       setRoomState(data);
     } catch (err) {
       setError(err.message);
@@ -44,7 +47,6 @@ const GameView = () => {
           throw new Error(`Failed to fetch history: ${response.statusText}`);
         }
         const data = await response.json();
-        // Separate conversation history from room state
         const { conversation_history, ...stateWithoutHistory } = data;
         setRoomState(stateWithoutHistory);
         console.log("new conversation")
@@ -62,7 +64,6 @@ const GameView = () => {
 
   // Poll room state every 3 seconds (but NOT when game is won)
   useEffect(() => {
-    // Don't poll if game is already won
     if (roomState?.winner_id) {
       return;
     }
@@ -80,6 +81,26 @@ const GameView = () => {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [conversationHistory]);
+
+  // Handle avatar changes based on submission state
+  useEffect(() => {
+    if (submitting) {
+      const randomThinkingAvatar = Math.random() < 0.5 ? 3 : 4;
+      setAvatarIndex(randomThinkingAvatar);
+      avatarThinkingStartTimeRef.current = Date.now();
+    } else if (avatarThinkingStartTimeRef.current !== null) {
+      const elapsedTime = Date.now() - avatarThinkingStartTimeRef.current;
+      const remainingTime = Math.max(0, 1000 - elapsedTime);
+
+      const timer = setTimeout(() => {
+        const randomIdleAvatar = Math.random() < 0.5 ? 0 : 1;
+        setAvatarIndex(randomIdleAvatar);
+        avatarThinkingStartTimeRef.current = null;
+      }, remainingTime);
+
+      return () => clearTimeout(timer);
+    }
+  }, [submitting]);
 
   const handleSubmitQuestion = async (e) => {
     e.preventDefault();
@@ -110,14 +131,12 @@ const GameView = () => {
 
       const responseData = await response.json();
 
-      // Add the new question and answer to conversation history
       setConversationHistory(prevHistory => [
         ...prevHistory,
         { role: 'player', question: question.trim() },
         { role: 'ai', answer: responseData.answer },
       ]);
 
-      // Clear input
       setQuestion('');
     } catch (err) {
       setError(err.message);
@@ -140,7 +159,6 @@ const GameView = () => {
       setSubmitting(true);
       setError(null);
       
-      // Real POST to /guess endpoint
       const response = await fetch(`${API_URL}/rooms/${roomId}/guess`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -163,18 +181,16 @@ const GameView = () => {
       const responseData = await response.json();
 
       if (responseData.correct) {
-        // Correct guess - update room state with winner_id
         setRoomState(prevState => ({
           ...prevState,
           winner_id: responseData.winner_id
         }));
         setError(null);
       } else {
-        // Incorrect guess - show message
         setError(responseData.message || 'To nie ta postać. Spróbuj jeszcze raz!');
       }
 
-      setQuestion(''); // wyczyść pole po zgadnięciu
+      setQuestion('');
     } catch (err) {
       setError(err.message);
       console.error('Error submitting guess:', err);
@@ -183,17 +199,30 @@ const GameView = () => {
     }
   };
 
+  const handleCopyId = async () => {
+  if (!roomState?.room_id) return;
+  
+  try {
+    await navigator.clipboard.writeText(roomState.room_id);
+    setCopied(true);
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
+  } catch (err) {
+    console.error('Nie udało się skopiować tekstu: ', err);
+  }
+};
 
-
+  // EKRAN ŁADOWANIA
   if (loading) {
     return (
-      <div className="game-view">
-        <div className="game-header">
-          <h1>AI-kinator</h1>
-          <button className="back-button" onClick={() => navigate('/')}>
-            ← Powrót do menu
-          </button>
-        </div>
+      <div className="layout-wrapper">
+        <header className="top-bar">
+          <div className="bar-group">
+            <strong>AI-Kinator</strong>
+          </div>
+          <button className="btn-back" onClick={() => navigate('/')}>Powrót do menu</button>
+        </header>
         <div className="loading">
           <div className="spinner"></div>
           Ładowanie pokoju gry...
@@ -202,111 +231,98 @@ const GameView = () => {
     );
   }
 
+  // EKRAN BŁĘDU POKOJU
   if (!roomState) {
     return (
-      <div className="game-view">
-        <div className="game-header">
-          <h1>AI-kinator</h1>
-          <button className="back-button" onClick={() => navigate('/')}>
-            ← Powrót do menu
-          </button>
-        </div>
-        <div className="error-message">
-          Nie udało się załadować stanu pokoju. Spróbuj ponownie.
+      <div className="layout-wrapper">
+        <header className="top-bar">
+          <div className="bar-group">
+            <strong>AI-Kinator</strong>
+          </div>
+          <button className="btn-back" onClick={() => navigate('/')}>Powrót do menu</button>
+        </header>
+        <div className="loading">
+          <div className="error-message">Nie udało się załadować stanu pokoju. Spróbuj ponownie.</div>
         </div>
       </div>
     );
   }
 
-  // Show win screen if player won
+  // EKRAN ZWYCIĘSTWA
   if (roomState.winner_id) {
     return <WinScreen roomState={roomState} conversationHistory={conversationHistory} />;
   }
 
+  // GŁÓWNY WIDOK GRY
   return (
-    <div className="game-view">
-      {/* Header */}
-      <div className="game-header">
-        <h1>AI-kinator</h1>
-        <div className="room-id">ID pokoju: {roomState.room_id}</div>
-        <button className="back-button" onClick={() => navigate('/')}>
-          ← Powrót do menu
-        </button>
-      </div>
+    <div className="layout-wrapper">
+      <header className="top-bar">
+        <div className="bar-group">
+          <strong>AI-Kinator</strong>
+        </div>
+        <div className="bar-group">
+          <span className="room-badge">
+              {roomState.room_id}
+              <button className="btn-copy-text" onClick={handleCopyId} disabled={copied}>
+                {copied ? 'SKOPIOWANO' : 'SKOPIUJ ID'}
+              </button>
+          </span>
+          <button className="btn-back" onClick={() => navigate('/')}>Powrót do menu</button>
+        </div>
+      </header>
 
-      {/* Main container */}
-      <div className="game-container">
-        {/* Left side - Akinator image */}
-        <div className="game-left">
-          <div className="image-placeholder">
-            🎭 Zgadnij postać!
-          </div>
-          {/* You can replace with actual image:
-          <img 
-            src="/akinator.png" 
-            alt="Akinator" 
-            className="akinator-image" 
-          /> */}
+      <main className="center-stage">
+        
+        {/* LEWY KONTENER */}
+        <div className="left-panel">
+          <PlayerAvatar avatarIndex={avatarIndex} size = "300px"/>
         </div>
 
-        {/* Right side - Chat */}
-        <div className="game-right">
-          <div className="chat-header">Rozmowa ({conversationHistory?.length || 0} wiadomości)</div>
-
-          {/* Chat messages */}
+        {/* (CZAT) */}
+        <div className="chat-box">
+          <div className="chat-header">
+            Zadaj pytanie AI-Kinatorowi ({conversationHistory?.length || 0})
+          </div>
           <div className="chat-messages">
-            {error && <div className="error-message">{error}</div>}
-
-            {conversationHistory && conversationHistory.length > 0 ? (
-              conversationHistory.map((entry, idx) => (
-                <div key={idx} className={`message ${entry.role}`}>
-                  <div>
-                    <div className="message-label">{entry.role === 'player' ? '🧑 Ty' : '🤖 AI-kinator'}</div>
-                    <div className="message-bubble">
-                      {entry.role === 'player' ? entry.question : entry.answer}
-                    </div>
+            {error && <div className="chat-error">{error}</div>}
+            {conversationHistory.length === 0 ? (
+              <div className="chat-empty">Zadaj pierwsze pytanie!</div>
+            ) : (
+              conversationHistory.map((msg, i) => (
+                <div key={i} className={`msg-row ${msg.role === 'player' ? 'msg-right' : 'msg-left'}`}>
+                  <div className="msg-bubble">
+                    {msg.role === 'player' ? msg.question : msg.answer}
                   </div>
                 </div>
               ))
-            ) : (
-              <div className="loading">
-                <div>Brak pytań. Zacznij rozmawiać!</div>
-              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
-
-          {/* Input area */}
-            <form onSubmit={(e) => e.preventDefault()} className="chat-input-area">
-              <input
-                type="text"
-                className="question-input"
-                placeholder="Zadaj pytanie lub wpisz zgadywaną postać..."
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                disabled={submitting}
-                maxLength={200}
-              />
-              <button
-                type="submit"
-                className="send-button"
-                onClick={handleSubmitQuestion}
-                disabled={submitting || !question.trim()}
-              >
-                {submitting ? '⏳' : '📤'} Pytam
-              </button>
-              <button 
-                type="submit" 
-                className="send-button" 
-                onClick={handleGuess}
-                disabled={submitting || !question.trim()}
-              >
-                {submitting ? '⏳' : '🤔'} Zgaduję
-              </button>
-            </form>
-
+          <form className="chat-input-area" onSubmit={(e) => e.preventDefault()}>
+            <input
+              type="text"
+              placeholder="Wpisz pytanie lub zgadnij postać..."
+              value={question}
+              onChange={(e) => {
+                setQuestion(e.target.value);
+                setError(null);
+              }}
+              disabled={submitting}
+            />
+            <button className="btn-action" onClick={handleSubmitQuestion} disabled={submitting || !question.trim()}>
+              Pytam
+            </button>
+            <button className="btn-action" onClick={handleGuess} disabled={submitting || !question.trim()}>
+              Zgaduję
+            </button>
+          </form>
         </div>
-      </div>
+
+        {/* PRAWY KONTENER */}
+        <div className="right-panel">
+        </div>
+
+      </main>
     </div>
   );
 };

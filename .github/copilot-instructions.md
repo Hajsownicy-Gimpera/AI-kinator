@@ -407,26 +407,65 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 - **Separate State Management:**
   - `roomState` – Players, game phase, winner (updated by polling)
   - `conversationHistory` – Chat messages (loaded from `/join`, updated by question submissions only)
-- **Layout:** 30% left (akinator image placeholder), 70% right (scrollable chat)
+  - `avatarIndex` – Player avatar state (0-1: idle, 3-4: thinking/animating)
+- **Avatar Animation:**
+  - Idle states (0 or 1): Randomly selected when game is waiting for user input
+  - Thinking states (3 or 4): Randomly selected when user submits question/guess
+  - Thinking animation persists for minimum 1 second before returning to idle
+  - Uses `avatarThinkingStartTimeRef` to track animation timing independently from server response time
+  - Smart timing: waits for server response + ensures minimum 1 second thinking animation
+- **Theme Support:**
+  - Dark/light theme toggle via ThemeToggle component
+  - All styled-components use theme tokens for consistency
+  - Theme context provider wraps entire app (ThemeContext.js)
+- **Layout:** 30% left (player avatar sprite + placeholder), 70% right (scrollable chat)
+  - Uses styled-components for all styling (no separate CSS file)
+  - Responsive design: stacks vertically on screens < 1024px
 - **Chat Display:** Messages from `conversationHistory` with player/AI distinction
-- **User Input:** Text input with validation, send button, auto-disables when empty
+- **User Input:** Text input with validation (max 200 chars), "Pytam" and "Zgaduję" buttons, auto-disables when empty
 - **Auto-scroll:** Smoothly scrolls to latest messages when conversation updates
 - **Error Handling:** Displays user-friendly error messages and loading states
-- **Responsive:** Adapts to mobile/tablet (stacks vertically on smaller screens)
+- **Win Screen:** Dedicated WinScreen component displays when game ends
 
 **Key Dependencies:**
 - `react-router-dom` (for `useParams`, `useNavigate`)
+- `PlayerAvatar` component for sprite-based avatar rendering (indices 0-5)
+- `AIAvatar` component for AI expression display
+- `ThemeToggle` component for dark/light mode
+- `styled-components` for all styling
 - React Hooks: `useState`, `useEffect`, `useRef`, `useCallback`
 
+**Avatar Spritesheet (Avatars_background_free.png):**
+- 3 columns × 2 rows = 6 sprites
+- 0: Idle (arms crossed)
+- 1: Idle (hands together)
+- 2: Happy (thumbs up)
+- 3: Thinking (chin)
+- 4: Thinking (laughing)
+- 5: Thinking (hands spread)
+- Background positioning: 0% 0%, 48% 0%, 96% 0% (row 1) and 0% 103%, 42% 103%, 96% 103% (row 2)
+
 **State Flow:**
-1. Component mount → Fetch full state from `/join` → Set `roomState` + `conversationHistory`
-2. Polling starts → Every 3 seconds fetch `/state` → Update `roomState` only (conversation stays separate)
-3. User submits question → POST to `/question` → Add Q&A to `conversationHistory` locally
+1. Component mount → Fetch history from `/join` → Set `roomState` + `conversationHistory` → Avatar to idle (0 or 1)
+2. Polling starts → Every 3 seconds fetch `/state` → Update `roomState` only
+3. User submits question/guess:
+   - POST to `/question` → Add Q&A to `conversationHistory` locally
+   - Avatar immediately changes to thinking (3 or 4)
+   - Record submission time in `avatarThinkingStartTimeRef`
+4. Server responds:
+   - Calculate elapsed time since submission
+   - If < 1 second: wait remaining time, then return to idle
+   - If >= 1 second: immediately return to idle
+5. Avatar returns to random idle state (0 or 1)
 
 **To Use:**
 ```javascript
-// Add route to App.js
-<Route path="/game/:roomId" element={<GameView />} />
+// Add route to App.js with theme provider
+import { ThemeProvider } from '../../context/ThemeContext';
+
+<ThemeProvider>
+  <Route path="/room/:roomId" element={<GameView />} />
+</ThemeProvider>
 
 // Navigate to game
 navigate(`/game/${roomId}`);
@@ -438,6 +477,11 @@ navigate(`/game/${roomId}`);
 - **BE-6 implemented (2026-05-17):** Room creation now exposes `invite_code` and `max_players` (`solo` = 1, `duel` = 2, `battle_royale` = 10). `POST /rooms/{room_id}/join` accepts `username` and returns `player_id`, full room state, and history. `GET /rooms/{room_id}/state` returns room state with players but no conversation history, while `guess`/`question`/`join` reject actions after `phase=ended`. Tests updated in `backend/tests/test_room_state.py` and `backend/tests/test_guess_endpoint.py`.
 - **BE-7 implemented (2026-05-17):** `GET /rooms/{room_id}/state` polling endpoint now returns `RoomState` (no conversation_history). Conversation history is loaded only from `/join` endpoint on initial load. Frontend polling updates room state separately from conversation history. Tests updated: `backend/tests/test_room_state.py`.
 
+
+### Recent frontend updates
+
+- **FE-6 implemented (2026-05-18):** Major UI overhaul with styled-components. Introduced ThemeContext for dark/light theme, added AIAvatar component, completely refactored GameView with styled-components replacing CSS file. Added PlayerAvatar component and avatar asset files (Avatars.jpg, Avatars2.png). Implemented theme toggle functionality.
+- **FE-7 implemented (2026-05-18):** Smart avatar animation system. Added high-quality avatar spritesheet (Avatars_background_free.png) with 6 sprite frames (0-5). Implemented `avatarThinkingStartTimeRef` for intelligent animation timing that ensures minimum 1 second thinking animation regardless of server response time. Avatar changes immediately to thinking state (3-4) on submit, waits for response, then returns to idle state (0-1) after ensuring 1-second minimum display.
 ---
 
 ## Git Workflow & Branching

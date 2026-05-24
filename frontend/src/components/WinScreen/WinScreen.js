@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import PlayerAvatar from '../PlayerAvatar/PlayerAvatar';
 import './WinScreen.css';
 
 const WinScreen = ({ roomState, conversationHistory }) => {
@@ -9,6 +10,12 @@ const WinScreen = ({ roomState, conversationHistory }) => {
   return (
     <div className="win-screen">
       <div className="win-container">
+        
+        {/* Simple wrapper for the avatar */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+          <PlayerAvatar avatarIndex={1} size="150px" />
+        </div>
+        
         <div className="win-emoji">🎉</div>
         <h1 className="win-title">Gratulacje!</h1>
         <p className="win-message">Udało Ci się odgadnąć postać!</p>
@@ -21,11 +28,12 @@ const WinScreen = ({ roomState, conversationHistory }) => {
         </div>
 
         <button 
-          className="win-button" 
+          className="win-button"
           onClick={() => navigate('/')}
         >
           ← Powrót do menu
         </button>
+        
       </div>
     </div>
   );
