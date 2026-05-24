@@ -26,6 +26,12 @@ Deliver production code that fulfills the user request, with unit tests added or
 6. Update [copilot-instructions.md](../../copilot-instructions.md) at the end to include the newly implemented feature(s), preserving existing roadmap or not-yet-implemented sections.
 7. Report what changed, what was tested, and any remaining risk.
 
+## Data Model Assumption
+- Assume the current schema is authoritative.
+- Do not add compatibility behavior for legacy or partially migrated rooms unless the user explicitly asks for migration support.
+- Do not introduce guards, fallback parsing, or conditional logic that checks whether older room records match a previous model shape.
+- If a request changes the schema, update the current model and tests directly rather than preserving old formats.
+
 ## Decision Points
 - If the request is ambiguous:
 Ask one concise clarifying question before editing.

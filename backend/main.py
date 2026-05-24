@@ -10,7 +10,7 @@ from typing import Literal
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import Column, DateTime, String, create_engine, inspect
+from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -31,10 +31,18 @@ DEFAULT_PLAYERS = [
         "player_id": "p1",
         "username": "Gracz1",
         "guess_count": 0,
+        "hint_used": False,
+        "penalty_seconds": 0,
         "has_guessed": False,
         "guessed_at": None,
     }
 ]
+
+MODE_MAX_PLAYERS = {
+    "solo": 1,
+    "duel": 2,
+    "battle_royale": 10,
+}
 
 DEFAULT_HISTORY = [
     {
@@ -51,9 +59,12 @@ DEFAULT_HISTORY = [
 class RoomDB(Base):
     __tablename__ = "rooms"
     room_id = Column(String, primary_key=True, index=True)
+    invite_code = Column(String, unique=True, index=True)
     game_mode = Column(String)
+    max_players = Column(Integer, nullable=False, default=2)
     status = Column(String, default="waiting")
     phase = Column(String, default="waiting", nullable=False)
+    winner_id = Column(String, nullable=True)
     secret_character = Column(String, nullable=True)
     players_json = Column(String, default="[]", nullable=False)
     history_json = Column(String, default="[]", nullable=False)
@@ -62,35 +73,13 @@ class RoomDB(Base):
 # Utworzenie tabel
 Base.metadata.create_all(bind=engine)
 
-
-def ensure_room_state_columns():
-    with engine.begin() as connection:
-        inspector = inspect(connection)
-
-        if "rooms" not in inspector.get_table_names():
-            return
-
-        existing_columns = {column["name"] for column in inspector.get_columns("rooms")}
-        column_definitions = {
-            "phase": "VARCHAR NOT NULL DEFAULT 'waiting'",
-            "secret_character": "VARCHAR",
-            "players_json": "VARCHAR NOT NULL DEFAULT '[]'",
-            "history_json": "VARCHAR NOT NULL DEFAULT '[]'",
-        }
-
-        for column_name, column_definition in column_definitions.items():
-            if column_name not in existing_columns:
-                connection.exec_driver_sql(
-                    f"ALTER TABLE rooms ADD COLUMN {column_name} {column_definition}"
-                )
-
-
-ensure_room_state_columns()
-
 # --- MODELE PYDANTIC ---
 class RoomResponse(BaseModel):
     room_id: str
+    invite_code: str
     game_mode: str
+    max_players: int
+    phase: str
     status: str
 
     class Config:
@@ -107,6 +96,8 @@ class PlayerState(BaseModel):
     player_id: str
     username: str
     guess_count: int
+    hint_used: bool
+    penalty_seconds: int
     has_guessed: bool
     guessed_at: datetime | None
 
@@ -114,6 +105,8 @@ class PlayerState(BaseModel):
 class RoomState(BaseModel):
     room_id: str
     game_mode: str
+    invite_code: str
+    max_players: int
     phase: Literal["waiting", "active", "ended"]
     players: list[PlayerState]
     winner_id: str | None
@@ -126,6 +119,15 @@ class RoomState(BaseModel):
 
 class GameState(RoomState):
     conversation_history: list[ConversationEntry]
+
+
+class JoinRequest(BaseModel):
+    username: str
+    invite_code: str | None = None
+
+
+class JoinResponse(GameState):
+    player_id: str
 
 
 class QuestionRequest(BaseModel):
@@ -156,6 +158,13 @@ def get_room_logic(room_id: str, db: Session):
     room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
+    if not room.invite_code:
+        room.invite_code = _generate_invite_code()
+    if not room.max_players:
+        room.max_players = _default_max_players(room.game_mode)
+    db.add(room)
+    db.commit()
+    db.refresh(room)
     return room
 
 
@@ -181,15 +190,59 @@ def _json_list_value(raw_value, fallback):
     return parsed_value
 
 
+def _default_max_players(game_mode: str) -> int:
+    return MODE_MAX_PLAYERS.get(game_mode, MODE_MAX_PLAYERS["duel"])
+
+
+def _generate_invite_code() -> str:
+    return uuid.uuid4().hex[:8].upper()
+
+
+def _normalize_players(players: list[dict]) -> list[dict]:
+    normalized_players: list[dict] = []
+    for player in players:
+        normalized_players.append(
+            {
+                "player_id": player.get("player_id", str(uuid.uuid4())),
+                "username": player.get("username", "Gracz"),
+                "guess_count": int(player.get("guess_count", 0) or 0),
+                "hint_used": bool(player.get("hint_used", False)),
+                "penalty_seconds": int(player.get("penalty_seconds", 0) or 0),
+                "has_guessed": bool(player.get("has_guessed", False)),
+                "guessed_at": player.get("guessed_at"),
+            }
+        )
+    return normalized_players or [dict(player) for player in DEFAULT_PLAYERS]
+
+
+def _normalize_room_state(room: RoomDB, db: Session) -> RoomDB:
+    changed = False
+
+    if not room.invite_code:
+        room.invite_code = _generate_invite_code()
+        changed = True
+
+    if not room.max_players:
+        room.max_players = _default_max_players(room.game_mode)
+        changed = True
+
+    if changed:
+        db.add(room)
+        db.commit()
+        db.refresh(room)
+
+    return room
+
+
 def get_room_with_state(room_id: str, db: Session) -> RoomState:
-    room = get_room_logic(room_id, db)
+    room = _normalize_room_state(get_room_logic(room_id, db), db)
     room_phase = room.phase or room.status or "waiting"
 
     if room_phase not in {"waiting", "active", "ended"}:
         room_phase = "waiting"
 
-    players = _json_list_value(room.players_json, DEFAULT_PLAYERS)
-    winner_id = next(
+    players = _normalize_players(_json_list_value(room.players_json, DEFAULT_PLAYERS))
+    winner_id = room.winner_id or next(
         (p.get("player_id") for p in players if p.get("has_guessed")),
         None,
     )
@@ -197,6 +250,8 @@ def get_room_with_state(room_id: str, db: Session) -> RoomState:
     return RoomState(
         room_id=room.room_id,
         game_mode=room.game_mode,
+        invite_code=room.invite_code,
+        max_players=int(room.max_players or _default_max_players(room.game_mode)),
         phase=room_phase,
         players=players,
         winner_id=winner_id,
@@ -246,13 +301,19 @@ def health():
 
 # Logika tworzenia pokoju
 def create_room_logic(mode: str, db: Session):
+    max_players = _default_max_players(mode)
+    initial_players = _normalize_players(DEFAULT_PLAYERS)
+    phase = "active" if len(initial_players) >= max_players else "waiting"
     new_room = RoomDB(
         room_id=str(uuid.uuid4()),
+        invite_code=_generate_invite_code(),
         game_mode=mode,
-        status="waiting",
-        phase="waiting",
+        max_players=max_players,
+        status=phase,
+        phase=phase,
+        winner_id=None,
         secret_character=random.choice(EXAMPLE_CHARACTERS),
-        players_json=json.dumps(DEFAULT_PLAYERS),
+        players_json=json.dumps(initial_players, ensure_ascii=False),
         history_json=json.dumps(DEFAULT_HISTORY),
     )
     db.add(new_room)
@@ -283,12 +344,61 @@ def get_room_history(room_id: str, db: Session = Depends(get_db)):
     return get_room_with_history(room_id, db)
 
 
+@app.post("/rooms/{room_id}/join", response_model=JoinResponse, response_model_exclude={"secret_character"})
+def join_room(room_id: str, request: JoinRequest, db: Session = Depends(get_db)):
+    room = _normalize_room_state(get_room_logic(room_id, db), db)
+
+    if room.phase == "ended":
+        raise HTTPException(status_code=400, detail="Game has already ended")
+
+    username = request.username.strip()
+    if not username:
+        raise HTTPException(status_code=400, detail="Username cannot be empty")
+    if len(username) > 100:
+        raise HTTPException(status_code=400, detail="Username must be between 1 and 100 characters")
+    if request.invite_code and request.invite_code != room.invite_code:
+        raise HTTPException(status_code=400, detail="Invalid invite code")
+
+    players = _normalize_players(_json_list_value(room.players_json, DEFAULT_PLAYERS))
+    if len(players) >= int(room.max_players or _default_max_players(room.game_mode)):
+        raise HTTPException(status_code=400, detail="Room is full")
+
+    player_id = str(uuid.uuid4())
+    players.append(
+        {
+            "player_id": player_id,
+            "username": username,
+            "guess_count": 0,
+            "hint_used": False,
+            "penalty_seconds": 0,
+            "has_guessed": False,
+            "guessed_at": None,
+        }
+    )
+
+    room.players_json = json.dumps(players, ensure_ascii=False)
+    if len(players) >= int(room.max_players or _default_max_players(room.game_mode)):
+        room.phase = "active"
+        room.status = "active"
+
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+
+    state = get_room_with_history(room_id, db)
+    return {
+        **state.model_dump(),
+        "player_id": player_id,
+    }
+
+
 @app.post("/rooms/{room_id}/question", response_model=QuestionResponse)
 def submit_question(room_id: str, request: QuestionRequest, db: Session = Depends(get_db)):
     """Submit a question and get AI response (Tak/Nie/Nie wiem)."""
-    room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
-    if room is None:
-        raise HTTPException(status_code=404, detail="Room not found")
+    room = _normalize_room_state(get_room_logic(room_id, db), db)
+
+    if room.phase == "ended":
+        raise HTTPException(status_code=400, detail="Game has already ended")
 
     question = request.question.strip()
     if not question:
@@ -297,7 +407,7 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
         raise HTTPException(status_code=400, detail="Question must be between 1 and 500 characters")
 
     # Ensure player is part of the room
-    players = _json_list_value(room.players_json, DEFAULT_PLAYERS)
+    players = _normalize_players(_json_list_value(room.players_json, DEFAULT_PLAYERS))
     if not any(p.get("player_id") == request.player_id for p in players):
         raise HTTPException(status_code=404, detail="Player not in room")
 
@@ -339,9 +449,10 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
 @app.post("/rooms/{room_id}/guess", response_model=GuessResponse)
 def submit_guess(room_id: str, request: GuessRequest, db: Session = Depends(get_db)):
     """Submit a guess; compare normalized strings against the secret character."""
-    room = db.query(RoomDB).filter(RoomDB.room_id == room_id).first()
-    if room is None:
-        raise HTTPException(status_code=404, detail="Room not found")
+    room = _normalize_room_state(get_room_logic(room_id, db), db)
+
+    if room.phase == "ended":
+        raise HTTPException(status_code=400, detail="Game has already ended")
 
     guess = request.guess.strip()
     if not guess:
@@ -349,12 +460,9 @@ def submit_guess(room_id: str, request: GuessRequest, db: Session = Depends(get_
     if len(guess) > 100:
         raise HTTPException(status_code=400, detail="Guess must be between 1 and 100 characters")
 
-    players = _json_list_value(room.players_json, DEFAULT_PLAYERS)
+    players = _normalize_players(_json_list_value(room.players_json, DEFAULT_PLAYERS))
     if not any(p.get("player_id") == request.player_id for p in players):
         raise HTTPException(status_code=404, detail="Player not in room")
-
-    if room.phase == "ended":
-        raise HTTPException(status_code=400, detail="Game has already ended")
 
     secret_character = (room.secret_character or "").strip()
     if not secret_character:
@@ -372,6 +480,7 @@ def submit_guess(room_id: str, request: GuessRequest, db: Session = Depends(get_
     if correct:
         room.phase = "ended"
         room.status = "ended"
+        room.winner_id = request.player_id
         for p in players:
             if p.get("player_id") == request.player_id:
                 p["has_guessed"] = True

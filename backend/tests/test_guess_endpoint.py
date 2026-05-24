@@ -1,19 +1,6 @@
-import importlib
 import json
-import sys
 
-from fastapi.testclient import TestClient
-
-from .test_room_state import _create_legacy_database
-
-
-def _bootstrap_app(tmp_path, monkeypatch):
-    db_path = tmp_path / "rooms.db"
-    _create_legacy_database(db_path)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
-    sys.modules.pop("main", None)
-    main = importlib.import_module("main")
-    return main, TestClient(main.app)
+from .test_room_state import _bootstrap_app as bootstrap_app
 
 
 def _set_secret_character(main, room_id: str, secret: str) -> None:
@@ -30,7 +17,7 @@ def _read_room(main, room_id: str):
 
 
 def test_correct_guess_ends_room_and_sets_winner(tmp_path, monkeypatch):
-    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    main, client = bootstrap_app(tmp_path, monkeypatch)
     room_id = client.post("/games/duel").json()["room_id"]
     _set_secret_character(main, room_id, "Albert Einstein")
 
@@ -59,7 +46,7 @@ def test_correct_guess_ends_room_and_sets_winner(tmp_path, monkeypatch):
 
 
 def test_correct_guess_normalizes_case_spaces_and_diacritics(tmp_path, monkeypatch):
-    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    main, client = bootstrap_app(tmp_path, monkeypatch)
 
     cases = [
         ("Albert Einstein", "alberteinstein"),
@@ -82,7 +69,7 @@ def test_correct_guess_normalizes_case_spaces_and_diacritics(tmp_path, monkeypat
 
 
 def test_typo_does_not_count_as_correct(tmp_path, monkeypatch):
-    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    main, client = bootstrap_app(tmp_path, monkeypatch)
     room_id = client.post("/games/duel").json()["room_id"]
     _set_secret_character(main, room_id, "Albert Einstein")
 
@@ -98,7 +85,7 @@ def test_typo_does_not_count_as_correct(tmp_path, monkeypatch):
 
 
 def test_incorrect_guess_keeps_game_active_and_no_winner(tmp_path, monkeypatch):
-    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    main, client = bootstrap_app(tmp_path, monkeypatch)
     room_id = client.post("/games/duel").json()["room_id"]
     _set_secret_character(main, room_id, "Albert Einstein")
 
@@ -122,7 +109,7 @@ def test_incorrect_guess_keeps_game_active_and_no_winner(tmp_path, monkeypatch):
 
 
 def test_can_continue_asking_questions_after_incorrect_guess(tmp_path, monkeypatch):
-    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    main, client = bootstrap_app(tmp_path, monkeypatch)
     room_id = client.post("/games/duel").json()["room_id"]
     _set_secret_character(main, room_id, "Albert Einstein")
 
@@ -142,7 +129,7 @@ def test_can_continue_asking_questions_after_incorrect_guess(tmp_path, monkeypat
 
 
 def test_no_more_guesses_after_game_ends(tmp_path, monkeypatch):
-    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    main, client = bootstrap_app(tmp_path, monkeypatch)
     room_id = client.post("/games/duel").json()["room_id"]
     _set_secret_character(main, room_id, "Albert Einstein")
 
@@ -160,9 +147,23 @@ def test_no_more_guesses_after_game_ends(tmp_path, monkeypatch):
     assert second.status_code == 400
     assert second.json()["detail"] == "Game has already ended"
 
+    question_after_end = client.post(
+        f"/rooms/{room_id}/question",
+        json={"player_id": "p1", "question": "Czy to mężczyzna?"},
+    )
+    assert question_after_end.status_code == 400
+    assert question_after_end.json()["detail"] == "Game has already ended"
+
+    join_after_end = client.post(
+        f"/rooms/{room_id}/join",
+        json={"username": "Nowy gracz"},
+    )
+    assert join_after_end.status_code == 400
+    assert join_after_end.json()["detail"] == "Game has already ended"
+
 
 def test_guess_404_for_unknown_room(tmp_path, monkeypatch):
-    _, client = _bootstrap_app(tmp_path, monkeypatch)
+    _, client = bootstrap_app(tmp_path, monkeypatch)
 
     resp = client.post(
         "/rooms/non-existing-room/guess",
@@ -173,7 +174,7 @@ def test_guess_404_for_unknown_room(tmp_path, monkeypatch):
 
 
 def test_guess_404_for_player_not_in_room(tmp_path, monkeypatch):
-    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    main, client = bootstrap_app(tmp_path, monkeypatch)
     room_id = client.post("/games/duel").json()["room_id"]
 
     resp = client.post(
@@ -185,7 +186,7 @@ def test_guess_404_for_player_not_in_room(tmp_path, monkeypatch):
 
 
 def test_guess_400_for_empty_guess(tmp_path, monkeypatch):
-    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    main, client = bootstrap_app(tmp_path, monkeypatch)
     room_id = client.post("/games/duel").json()["room_id"]
 
     resp = client.post(
@@ -197,7 +198,7 @@ def test_guess_400_for_empty_guess(tmp_path, monkeypatch):
 
 
 def test_guess_400_for_too_long_guess(tmp_path, monkeypatch):
-    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    main, client = bootstrap_app(tmp_path, monkeypatch)
     room_id = client.post("/games/duel").json()["room_id"]
 
     resp = client.post(

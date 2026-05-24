@@ -1,6 +1,6 @@
 # Copilot Development Guide – AI-kinator
 
-**Last Updated:** 2026-05-10
+**Last Updated:** 2026-05-17
 **Status:** In Development – MVP Reached
 
 ## 📊 Current Sprint Status
@@ -58,8 +58,8 @@ cd backend && uv sync
 - `POST /games/solo` – Create solo game
 - `POST /games/duel` – Create duel room
 - `POST /games/battle-royale` – Create battle royale room
-- `GET /rooms/{room_id}/join` – Full room history with conversation (initial load)
-- `GET /rooms/{room_id}/state` – Current game state for polling (no conversation history)
+- `GET /rooms/{room_id}/join` – Full room state + conversation history (initial load only)
+- `GET /rooms/{room_id}/state` – Current game state for polling (NO conversation history)
 - `POST /rooms/{room_id}/question` – Submit question and get AI response
 
 ### Frontend (React)
@@ -127,28 +127,32 @@ npm run format
 ### Game State Management
 
 **Backend Structure:**
-- `GameSession` – Tracks solo game: secret character, conversation history, guess count
-- `GameRoom` – Tracks multiplayer game: players, shared secret, per-player guesses, ranked leaderboard
+- `RoomDB` – Persistent room state for both solo and multiplayer: `room_id`, `game_mode`, `phase`, `secret_character`, `players_json`, `history_json`, `winner_id`, `created_at`, `invite_code`, `max_players`
 - `LLMChain` – Wrapped LLM interface ensuring responses are `Tak`, `Nie`, or `Nie wiem`
-- `RoomDB` – Persistent room state columns for `phase`, `secret_character`, `players_json`, and `history_json`
+- Response models: `RoomState` (state without history), `GameState` (state with history), `QuestionResponse` (answer + updated_history), `GuessResponse` (result + updated_history)
 
 **Frontend Structure:**
-- `GameContext` – Global game state (current room, player info, game phase)
-- Polling interval: **2–3 seconds** (`GET /rooms/{room_id}/state`)
-- Local state: UI state, user input, client-side validation
+- Direct state management with React Hooks (`useState`, `useEffect`, `useRef`, `useCallback`)
+- No global context; each component manages its own state
+- Polling interval: **3 seconds** (`GET /rooms/{room_id}/state`)
+- Local state: UI state, user input, client-side validation, conversation history
 
 ### Communication Flow
 
 1. **Solo Mode:**
-   - Player submits question → `POST /games/{session_id}/question`
-   - Backend appends to history, calls LLM, returns answer
-   - Frontend displays answer, player can guess or ask again
+   - Player creates game → `POST /games/solo` returns `room_id`
+   - Player gets initial state → `GET /rooms/{room_id}/join` (with conversation history)
+   - Player submits question → `POST /rooms/{room_id}/question` returns AI answer
+   - Player can guess → `POST /rooms/{room_id}/guess`
+   - Backend appends to history, returns updated history with each action
 
 2. **Multiplayer (Duel/Battle Royale):**
-   - Player joins/creates room → `POST /games/duel` or `POST /games/battle-royale`
-   - Backend generates secret character, initializes room state
-   - Players poll for state updates → `GET /rooms/{room_id}/state`
+   - Player creates room → `POST /games/duel` or `POST /games/battle-royale` returns `room_id`
+   - Other players join → `POST /rooms/{room_id}/join` with username (returns full state + history + player_id)
+   - When room is full, phase becomes `active`
+   - Players poll for state updates → `GET /rooms/{room_id}/state` every 3 seconds (returns state without history)
    - Questions/guesses submitted → `POST /rooms/{room_id}/question` or `POST /rooms/{room_id}/guess`
+   - Each response includes `updated_history` with the new entries
    - First correct guess ends game; backend timestamps guesses to ensure fairness
 
 ---
@@ -183,33 +187,43 @@ Your answer:
 {
     "room_id": str,
     "game_mode": "duel" | "battle_royale" | "solo",
+    "invite_code": str,
+    "max_players": int,
+    "phase": "waiting" | "active" | "ended",
     "players": [
         {
             "player_id": str,
             "username": str,
             "guess_count": int,
+            "hint_used": bool,
+            "penalty_seconds": int,
             "has_guessed": bool,
-            "guessed_at": timestamp  # For ranking
+            "guessed_at": timestamp | null
         }
     ],
-    "conversation_history": [
-        {"role": "player", "question": str},
-        {"role": "ai", "answer": str}
-    ],
-    "game_phase": "waiting" | "active" | "ended",
     "winner_id": str | null,
-    "created_at": timestamp
+    "created_at": timestamp,
+    "secret_character": str | null  # Only in /join, not in /state
+}
+```
+
+**Conversation Entry:**
+```python
+{
+    "role": "player" | "ai",
+    "question": str | null,
+    "answer": str | null
 }
 ```
 
 ### Polling & State Updates
 
 - **Initial load:** `GET /rooms/{room_id}/join` fetches full room state + conversation history (called once on component mount)
-- **Polling endpoint:** `GET /rooms/{room_id}/state` polls every 3 seconds for game state updates (no conversation history)
+- **Polling endpoint:** `GET /rooms/{room_id}/state` polls every 3 seconds for game state updates (returns room state WITHOUT `conversation_history`)
 - **Question submission:** `POST /rooms/{room_id}/question` submits question and immediately returns AI answer
 - **Conversation updates:** Frontend maintains separate `conversationHistory` state, only updated by question submissions and initial load
-- **Security contract:** state response must omit `secret_character`; returned fields are `room_id`, `game_mode`, `players`, `game_phase`, `winner_id`, `created_at`
-- **Current implementation:** `GET /rooms/{room_id}/state` returns the persisted room state without `conversation_history`, while `GET /rooms/{room_id}/join` includes the full conversation history from `RoomDB`
+- **Security contract:** `/state` response excludes `secret_character` and `conversation_history`; returned fields include `room_id`, `game_mode`, `players`, `phase`, `winner_id`, `created_at`, `invite_code`, `max_players`
+- **Current implementation:** `/state` returns room state WITHOUT conversation_history; `/join` includes conversation_history from `RoomDB`
 - **Timeout:** Game rooms expire after 30 minutes of inactivity
 
 ### API Request/Response Format
@@ -223,17 +237,45 @@ POST /rooms/{room_id}/question
 }
 ```
 
-**Response Example:**
+**Response Example (submit question):**
 ```json
 {
     "question_id": "q_abc123",
-    "answer": "Tak"
+    "answer": "Tak",
+    "updated_history": [
+        {"role": "player", "question": "Czy ta osoba jest znana z polityki?"},
+        {"role": "ai", "answer": "Tak"}
+    ]
+}
+```
+
+**Request Example (submit guess):**
+```json
+POST /rooms/{room_id}/guess
+{
+    "player_id": "player_1",
+    "guess": "Albert Einstein"
+}
+```
+
+**Response Example (submit guess):**
+```json
+{
+    "correct": true,
+    "winner_id": "player_1",
+    "message": "Brawo! Albert Einstein to faktycznie sekretna postać.",
+    "updated_history": [
+        {"role": "player", "question": "[Zgaduję] Albert Einstein"},
+        {"role": "ai", "answer": "Tak"}
+    ]
 }
 ```
 
 **Frontend behavior:**
-- On question submission, add both question and answer to `conversationHistory` immediately
-- Polling updates `roomState` (game phase, players, etc.) but never touches conversation history
+- On question/guess submission, responses include `updated_history` which contains the new Q&A entry
+- Frontend should merge `updated_history` into local `conversationHistory` state
+- Polling updates `roomState` (game phase, players, etc.) but never touches conversation history (to avoid duplication)
+- Conversation history is loaded only once from `/join` on initial load
 
 ### Error Handling
 
@@ -259,9 +301,13 @@ ai-kinator/
 │   │   ├── llm_chain.py        # LangChain wrapper, validation, dummy mode
 │   │   └── prompts.py          # System prompt, EXAMPLE_CHARACTERS list
 │   └── tests/
+│       ├── test_full_flow.py
 │       ├── test_room_state.py
 │       ├── test_llm_chain.py
-│       └── test_question_endpoint.py
+│       ├── test_question_endpoint.py
+│       ├── test_guess_endpoint.py
+│       ├── test_invite_code.py
+│       └── __init__.py
 ├── frontend/
 │   ├── package.json
 │   ├── public/
@@ -271,6 +317,10 @@ ai-kinator/
 │   │   ├── App.css
 │   │   ├── index.js
 │   │   ├── index.css
+│   │   ├── components/
+│   │   │   └── WinScreen/      # Win screen component
+│   │   │       ├── WinScreen.js
+│   │   │       └── WinScreen.css
 │   │   └── pages/
 │   │       └── GameView/       # Game room interface
 │   │           ├── GameView.js # Room state polling, chat, input
@@ -353,10 +403,10 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 **Features Implemented:**
 - **Dual Data Fetching Strategy:**
   - Initial load: `GET /rooms/{room_id}/join` (full state + conversation history)
-  - Polling: `GET /rooms/{room_id}/state` every 3 seconds (game status only)
+  - Polling: `GET /rooms/{room_id}/state` every 3 seconds (state only, no conversation history)
 - **Separate State Management:**
   - `roomState` – Players, game phase, winner (updated by polling)
-  - `conversationHistory` – Chat messages (updated only by question submissions)
+  - `conversationHistory` – Chat messages (loaded from `/join`, updated by question submissions only)
 - **Layout:** 30% left (akinator image placeholder), 70% right (scrollable chat)
 - **Chat Display:** Messages from `conversationHistory` with player/AI distinction
 - **User Input:** Text input with validation, send button, auto-disables when empty
@@ -369,23 +419,24 @@ REACT_APP_POLLING_INTERVAL=3000  # milliseconds
 - React Hooks: `useState`, `useEffect`, `useRef`, `useCallback`
 
 **State Flow:**
-1. Component mount → Fetch history from `/join` → Set `roomState` + `conversationHistory`
-2. Polling starts → Every 3 seconds fetch `/state` → Update `roomState` only
-3. User submits question → POST to `/question` → Add Q&A to `conversationHistory`
+1. Component mount → Fetch full state from `/join` → Set `roomState` + `conversationHistory`
+2. Polling starts → Every 3 seconds fetch `/state` → Update `roomState` only (conversation stays separate)
+3. User submits question → POST to `/question` → Add Q&A to `conversationHistory` locally
 
 **To Use:**
 ```javascript
 // Add route to App.js
-<Route path="/room/:roomId" element={<GameView />} />
+<Route path="/game/:roomId" element={<GameView />} />
 
 // Navigate to game
-navigate(`/room/${roomId}`);
+navigate(`/game/${roomId}`);
+```
 
 ### Recent backend updates
 
 - **BE-5 implemented (2026-04-29):** `POST /rooms/{room_id}/question` now exists in the backend. Current behaviour: returns a dummy answer (`Tak|Nie|Nie wiem`), persists question+answer to `history_json`, and includes validation (empty question -> 400, player not in room -> 404). Tests added: `backend/tests/test_question_endpoint.py`.
-
-```
+- **BE-6 implemented (2026-05-17):** Room creation now exposes `invite_code` and `max_players` (`solo` = 1, `duel` = 2, `battle_royale` = 10). `POST /rooms/{room_id}/join` accepts `username` and returns `player_id`, full room state, and history. `GET /rooms/{room_id}/state` returns room state with players but no conversation history, while `guess`/`question`/`join` reject actions after `phase=ended`. Tests updated in `backend/tests/test_room_state.py` and `backend/tests/test_guess_endpoint.py`.
+- **BE-7 implemented (2026-05-17):** `GET /rooms/{room_id}/state` polling endpoint now returns `RoomState` (no conversation_history). Conversation history is loaded only from `/join` endpoint on initial load. Frontend polling updates room state separately from conversation history. Tests updated: `backend/tests/test_room_state.py`.
 
 ---
 
@@ -469,4 +520,4 @@ Follow the ticket ID format for branch names:
 
 - **Project Spec:** `copilot-instructions.md` (project requirements & team roles)
 
-*Last updated: 2026-05-03. Update this file as project structure and conventions evolve.*
+*Last updated: 2026-05-17. Update this file as project structure and conventions evolve.*
