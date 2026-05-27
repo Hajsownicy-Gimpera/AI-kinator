@@ -14,10 +14,12 @@ def get_llm():
         logger.warning("GOOGLE_API_KEY not set - LLM will run in dummy mode")
         return None
 
+    model_name = os.getenv("GOOGLE_GEMINI_MODEL", "gemini-2.5-flash")
+
     from langchain_google_genai import ChatGoogleGenerativeAI
 
     return ChatGoogleGenerativeAI(
-        model="gemini-3.1-flash-lite-preview",
+        model=model_name,
         google_api_key=api_key,
         temperature=0.0,
     )

@@ -61,6 +61,7 @@ cd backend && uv sync
 - `GET /rooms/{room_id}/join` – Full room state + conversation history (initial load only)
 - `GET /rooms/{room_id}/state` – Current game state for polling (NO conversation history)
 - `POST /rooms/{room_id}/question` – Submit question and get AI response
+- `POST /rooms/{room_id}/hint` – Submit a hint request and get a text clue, with one-time per-player usage and multiplayer penalty handling
 
 ### Frontend (React)
 
@@ -476,6 +477,7 @@ navigate(`/game/${roomId}`);
 - **BE-5 implemented (2026-04-29):** `POST /rooms/{room_id}/question` now exists in the backend. Current behaviour: returns a dummy answer (`Tak|Nie|Nie wiem`), persists question+answer to `history_json`, and includes validation (empty question -> 400, player not in room -> 404). Tests added: `backend/tests/test_question_endpoint.py`.
 - **BE-6 implemented (2026-05-17):** Room creation now exposes `invite_code` and `max_players` (`solo` = 1, `duel` = 2, `battle_royale` = 10). `POST /rooms/{room_id}/join` accepts `username` and returns `player_id`, full room state, and history. `GET /rooms/{room_id}/state` returns room state with players but no conversation history, while `guess`/`question`/`join` reject actions after `phase=ended`. Tests updated in `backend/tests/test_room_state.py` and `backend/tests/test_guess_endpoint.py`.
 - **BE-7 implemented (2026-05-17):** `GET /rooms/{room_id}/state` polling endpoint now returns `RoomState` (no conversation_history). Conversation history is loaded only from `/join` endpoint on initial load. Frontend polling updates room state separately from conversation history. Tests updated: `backend/tests/test_room_state.py`.
+- **BE-8 implemented (2026-05-26):** `POST /rooms/{room_id}/hint` returns a short LLM-generated character clue, records `hint_used` per player, and adds a `+30s` penalty in multiplayer (`duel`, `battle_royale`). Tests added: `backend/tests/test_hint_endpoint.py`.
 
 
 ### Recent frontend updates
