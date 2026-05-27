@@ -94,3 +94,48 @@ def test_submit_hint_unknown_room_returns_404(tmp_path, monkeypatch):
 
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Room not found"
+
+
+def test_submit_hint_rejected_when_room_ended(tmp_path, monkeypatch):
+    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        main.LLMChain,
+        "get_hint",
+        lambda self: {"hint_text": "Powinno byc zablokowane."},
+    )
+
+    room_id = client.post("/games/duel").json()["room_id"]
+
+    # mark room as ended
+    with main.SessionLocal() as session:
+        room = session.query(main.RoomDB).filter(main.RoomDB.room_id == room_id).first()
+        room.phase = "ended"
+        session.add(room)
+        session.commit()
+
+    resp = client.post(f"/rooms/{room_id}/hint", json={"player_id": "p1"})
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "Game has already ended"
+
+
+def test_submit_hint_adds_penalty_in_battle_royale(tmp_path, monkeypatch):
+    main, client = _bootstrap_app(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        main.LLMChain,
+        "get_hint",
+        lambda self: {"hint_text": "Battle clue."},
+    )
+
+    room_id = client.post("/games/battle-royale").json()["room_id"]
+
+    resp = client.post(f"/rooms/{room_id}/hint", json={"player_id": "p1"})
+    assert resp.status_code == 200
+
+    with main.SessionLocal() as session:
+        room = session.query(main.RoomDB).filter(main.RoomDB.room_id == room_id).first()
+        players = main.json.loads(room.players_json)
+        player = next(p for p in players if p["player_id"] == "p1")
+
+    assert player["hint_used"] is True
+    assert player["penalty_seconds"] == 30
