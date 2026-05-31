@@ -4,7 +4,6 @@
 **Status:** In Development – MVP Reached
 
 ## 📊 Current Sprint Status
-
 **Full task details:** See `docs/AIKINATOR-PROTOTYPE.md`
 
 
@@ -471,83 +470,6 @@ import { ThemeProvider } from '../../context/ThemeContext';
 navigate(`/game/${roomId}`);
 ```
 
-### Recent backend updates
-
-- **BE-5 implemented (2026-04-29):** `POST /rooms/{room_id}/question` now exists in the backend. Current behaviour: returns a dummy answer (`Tak|Nie|Nie wiem`), persists question+answer to `history_json`, and includes validation (empty question -> 400, player not in room -> 404). Tests added: `backend/tests/test_question_endpoint.py`.
-- **BE-6 implemented (2026-05-17):** Room creation now exposes `invite_code` and `max_players` (`solo` = 1, `duel` = 2, `battle_royale` = 10). `POST /rooms/{room_id}/join` accepts `username` and returns `player_id`, full room state, and history. `GET /rooms/{room_id}/state` returns room state with players but no conversation history, while `guess`/`question`/`join` reject actions after `phase=ended`. Tests updated in `backend/tests/test_room_state.py` and `backend/tests/test_guess_endpoint.py`.
-- **BE-7 implemented (2026-05-17):** `GET /rooms/{room_id}/state` polling endpoint now returns `RoomState` (no conversation_history). Conversation history is loaded only from `/join` endpoint on initial load. Frontend polling updates room state separately from conversation history. Tests updated: `backend/tests/test_room_state.py`.
-
-
-### Recent frontend updates
-
-- **FE-6 implemented (2026-05-18):** Major UI overhaul with styled-components. Introduced ThemeContext for dark/light theme, added AIAvatar component, completely refactored GameView with styled-components replacing CSS file. Added PlayerAvatar component and avatar asset files (Avatars.jpg, Avatars2.png). Implemented theme toggle functionality.
-- **FE-7 implemented (2026-05-18):** Smart avatar animation system. Added high-quality avatar spritesheet (Avatars_background_free.png) with 6 sprite frames (0-5). Implemented `avatarThinkingStartTimeRef` for intelligent animation timing that ensures minimum 1 second thinking animation regardless of server response time. Avatar changes immediately to thinking state (3-4) on submit, waits for response, then returns to idle state (0-1) after ensuring 1-second minimum display.
----
-
-## Git Workflow & Branching
-
-### Branch Naming Convention
-
-Follow the ticket ID format for branch names:
-
-**Format:** `{TICKET_ID}-{description}`
-
-**Examples:**
-- Ticket: `FE-3: Szkielet programu` → Branch: `FE-3-skeleton-setup`
-- Ticket: `BE-5: API endpoints` → Branch: `BE-5-api-endpoints`
-- Ticket: `AI-2: LLM integration` → Branch: `AI-2-llm-integration`
-
-**Guidelines:**
-- Use kebab-case (hyphens, no spaces)
-- Start with ticket ID (e.g., `FE-3`, `BE-5`)
-- Follow with short descriptive slug (2-4 words)
-- Use English lowercase
-- No special characters except hyphens
-- Keep it under 50 characters total when possible
-
-**Workflow:**
-1. Create local branch: `git checkout -b FE-3-feature-name`
-2. Commit with ticket reference: `FE-3 Added feature X`
-3. Push branch: `git push origin FE-3-feature-name`
-4. Create pull request with ticket link in description
-
----
-
-## Common Development Tasks
-
-### Adding a New Endpoint
-
-1. Create route function in `backend/routes/`
-2. Add request/response Pydantic models in `backend/models/`
-3. Update game state in backend as needed
-4. Add corresponding fetch call in frontend `api/client.js`
-5. Create component or hook to consume the endpoint
-
-### Adding a New Game Mode
-
-1. Define new game phase logic in `backend/models/game.py`
-2. Add state machine transitions
-3. Create new React component or extend existing `GameRoom.js`
-4. Update polling logic to handle new phase
-
-### Debugging LLM Chain Issues
-
-- Check `backend/ai/prompts.py` for correct system prompt format
-- Test LLM response directly: `python -m pytest tests/test_llm_chain.py -v`
-- Log all LLM inputs/outputs to `debug.log` for analysis
-- Use fallback answer `"Nie wiem"` if LLM behaves unexpectedly
-
----
-
-## Performance & Scaling Notes
-
-- **Polling overhead:** At 100 concurrent players with 3-second polling = ~33 requests/sec. Monitor backend response time.
-- **Character pool:** All 1000 characters in system prompt should fit in token limits; if not, switch to retrieval-based approach.
-- **Concurrent games:** SQLite may bottleneck; migrate to PostgreSQL if scaling beyond 50+ concurrent games.
-- **LLM cost:** Batch API calls or use smaller models for cost optimization.
-
----
-
 ## Troubleshooting
 
 | Issue | Solution |
@@ -559,9 +481,3 @@ Follow the ticket ID format for branch names:
 | Polling shows stale state | Verify `REACT_APP_POLLING_INTERVAL` is set correctly (default 3000ms) |
 
 ---
-
-## Quick Links
-
-- **Project Spec:** `copilot-instructions.md` (project requirements & team roles)
-
-*Last updated: 2026-05-17. Update this file as project structure and conventions evolve.*

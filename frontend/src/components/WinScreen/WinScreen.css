@@ -3,17 +3,28 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
+  background: linear-gradient(-45deg, #0f0c20 0%, #2b1055 35%, #591a75 65%, #0f0c20 100%);
+  background-size: 400% 400%;
+  animation: winGradientShift 20s ease infinite;
+}
+
+@keyframes winGradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .win-container {
-  background: white;
-  border-radius: 20px;
-  padding: 60px 40px;
+  width: 100%;
+  max-width: 620px;
+  padding: 42px 32px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(18px);
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 500px;
   animation: slideUp 0.5s ease-out;
 }
 
@@ -39,35 +50,36 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-20px);
+    transform: translateY(-16px);
   }
 }
 
 .win-title {
-  font-size: 48px;
-  color: #333;
-  margin: 0 0 10px 0;
-  font-weight: bold;
+  font-size: 44px;
+  color: #f8f7ff;
+  margin: 0 0 12px 0;
+  font-weight: 800;
 }
 
 .win-message {
   font-size: 18px;
-  color: #666;
-  margin: 0 0 40px 0;
+  color: #dcd8ff;
+  margin: 0 0 28px 0;
 }
 
 .win-details {
-  background: #f5f5f5;
-  border-radius: 15px;
-  padding: 30px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 28px 22px;
   margin-bottom: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .win-detail-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 14px;
   font-size: 16px;
 }
 
@@ -76,41 +88,105 @@
 }
 
 .detail-label {
-  color: #666;
-  font-weight: 600;
+  color: #c5bfe6;
+  font-weight: 700;
 }
 
 .detail-value {
-  color: #333;
-  font-weight: bold;
+  color: #ffffff;
+  font-weight: 800;
   font-size: 18px;
 }
 
 .win-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  background: #700ff7;
   color: white;
   border: none;
-  padding: 15px 40px;
+  padding: 15px 42px;
   font-size: 16px;
-  font-weight: 600;
-  border-radius: 50px;
+  font-weight: 700;
+  border-radius: 999px;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .win-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+  background: #9034f1;
+  box-shadow: 0 10px 25px rgba(112, 15, 247, 0.25);
 }
 
 .win-button:active {
   transform: translateY(0);
 }
 
+.ranking-table {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 30px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ranking-header {
+  display: grid;
+  grid-template-columns: 60px 1fr 80px;
+  gap: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font-weight: 700;
+  color: #c5bfe6;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ranking-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 80px;
+  gap: 15px;
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: center;
+  font-size: 14px;
+}
+
+.ranking-row:last-child {
+  border-bottom: none;
+}
+
+.ranking-row.winner {
+  background: rgba(112, 15, 247, 0.18);
+  padding: 15px;
+  border-radius: 12px;
+  border-bottom: none;
+  border-left: 4px solid #ffb400;
+}
+
+.ranking-row.current {
+  background: rgba(102, 126, 234, 0.14);
+  padding: 15px;
+  border-radius: 12px;
+  border-left: 4px solid #667eea;
+}
+
+.rank-col {
+  font-weight: 600;
+  color: #f4f3ff;
+}
+
+.ranking-header .rank-col {
+  color: #c5bfe6;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .win-container {
-    padding: 40px 20px;
+    padding: 32px 20px;
   }
 
   .win-title {
@@ -127,5 +203,11 @@
 
   .detail-value {
     font-size: 16px;
+  }
+
+  .ranking-header,
+  .ranking-row {
+    grid-template-columns: 50px 1fr 60px;
+    font-size: 12px;
   }
 }

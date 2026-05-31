@@ -128,6 +128,25 @@ def test_can_continue_asking_questions_after_incorrect_guess(tmp_path, monkeypat
     assert follow_up.json()["answer"] in ["Tak", "Nie", "Nie wiem"]
 
 
+def test_question_increments_player_guess_count(tmp_path, monkeypatch):
+    main, client = bootstrap_app(tmp_path, monkeypatch)
+    room_id = client.post("/games/duel").json()["room_id"]
+
+    response = client.post(
+        f"/rooms/{room_id}/question",
+        json={"player_id": "p1", "question": "Czy to mężczyzna?"},
+    )
+    assert response.status_code == 200
+
+    room = _read_room(main, room_id)
+    players = json.loads(room.players_json)
+    p1 = next(p for p in players if p["player_id"] == "p1")
+    assert p1["guess_count"] == 1
+
+    state_payload = client.get(f"/rooms/{room_id}/state").json()
+    assert state_payload["players"][0]["guess_count"] == 1
+
+
 def test_no_more_guesses_after_game_ends(tmp_path, monkeypatch):
     main, client = bootstrap_app(tmp_path, monkeypatch)
     room_id = client.post("/games/duel").json()["room_id"]

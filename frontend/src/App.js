@@ -36,18 +36,19 @@ const Home = () => {
       };
 
       const url = `http://localhost:8000${endpointMap[mode]}`;
-      const response = await axios.post(url);
-      const { room_id } = response.data;
+      const response = await axios.post(url, { username: nickname.trim() });
+      const { room_id, player_id } = response.data;
+      localStorage.setItem(`player_id_${room_id}`, player_id || 'p1');
       navigate(`/game/${room_id}`);
     } catch (err) {
-      console.error("Error:", err.response);
+      console.error("Error:", err.response || err);
       alert("Error: " + (err.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleJoinGame = () => {
+  const handleJoinGame = async () => {
     if (!nickname.trim()) {
       alert("Please enter or generate a nickname first!");
       return;
@@ -56,7 +57,34 @@ const Home = () => {
       alert("Please enter a room code to join");
       return;
     }
-    navigate(`/game/${joinCode}`);
+
+    try {
+      setLoading(true);
+      const inviteCandidate = joinCode.trim();
+      let roomId = inviteCandidate;
+      try {
+        const inviteResp = await axios.get(`http://localhost:8000/rooms/invite/${inviteCandidate}`);
+        roomId = inviteResp.data.room_id;
+      } catch (err) {
+        if (err.response?.status !== 404) {
+          throw err;
+        }
+      }
+
+      const joinResp = await axios.post(`http://localhost:8000/rooms/${roomId}/join`, {
+        username: nickname.trim(),
+        invite_code: inviteCandidate !== roomId ? inviteCandidate : undefined,
+      });
+
+      const { player_id } = joinResp.data;
+      localStorage.setItem(`player_id_${roomId}`, player_id);
+      navigate(`/game/${roomId}`);
+    } catch (err) {
+      console.error("Error joining room:", err.response || err);
+      alert("Error: " + (err.response?.data?.detail || err.message));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

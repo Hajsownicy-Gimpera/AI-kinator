@@ -9,18 +9,19 @@
 - **BE-3** (2026-04-18): `GET /rooms/{room_id}/state` returns dummy room state
 - **BE-4** (2026-04-29): RoomDB expanded with persisted phase/player/history state
 - **BE-5** (2026-04-29): `POST /rooms/{room_id}/question` implemented with LLMChain
+- **LLM-5**: Implement /guess endpoint with character validation
 - **FE-1** (2026-04-13): Frontend initialization + React
 - **FE-2** (2026-04-15): Home screen with game mode selection
 - **FE-3**: GameView component with polling
+- **FE-5**: Win screen + guess handler response logic
 - **FE-6** (2026-05-18): UI overhaul with styled-components, dark/light theme, ThemeContext, GameView redesign
 - **FE-7** (2026-05-18): Avatar animation system with smart timing, spritesheet-based rendering
-- **LLM-5**: Implement /guess endpoint with character validation
-- **FE-5**: Win screen + guess handler response logic
+- **FE-8** (2026-05-31): Obsługa trybów duel/battle royale w UI
+- **INT‑2** (2026-05-31): Integracja multiplayer + UI
 - **DEVOPS-1** (2026-04-19): GitHub Actions CI workflow with backend/frontend tests
 - **Spotkanie 1** (2026-04-08): Architecture discussion + roles
 - **Project Spec** (2026-04-12): Complete specification
 - **TRIVIAL** (2026-04-10): Setup command fixes
-
 
 ---
 
@@ -67,34 +68,7 @@ Nowe zadania według aneksu do specyfikacji. Skupiamy się na trybach wieloosobo
 - Podpowiedzi: nowy endpoint POST /rooms/{room_id}/hint, który wymusza odpowiedź LLM (cecha postaci) i zapisuje użycie podpowiedzi dla gracza.
 - Pokoje tematyczne: endpoint POST /games/{mode} przyjmuje dodatkowy parametr `category`. Backend przechowuje kategorię i używa jej do modyfikacji promptu (np. "The secret character is from category: Marvel").
 
----
-
-## Task 2.1: Backend – rozszerzenie GameRoom dla trybów multiplayer
-
-**Cel:** Model pokoju musi obsługiwać wielu graczy, śledzenie ich postępów, zgadywania, kar czasowych.
-
-**Wymagania:**
-- Dodaj pole `players`: lista obiektów {player_id, username, guess_count, hint_used (bool), penalty_seconds (int), guessed_at (timestamp|null), has_guessed (bool)}.
-- Dodaj pole `game_phase`: "waiting" → "active" → "ended".
-- Dodaj `max_players`: 2 dla duel, 10 dla battle royale.
-- Po dołączeniu gracza (`POST /rooms/{room_id}/join`) dodaj go do listy, przejdź do "active" gdy liczba graczy = max_players.
-- Zaimplementuj wykrywanie końca gry: gdy któryś gracz poprawnie odgadnie postać (przez `/guess`), ustaw phase na "ended", winner_id.
-- Backend utrzymuje słownik pokoi w pamięci (jak dotychczas).
-
----
-
-## Task 2.2: Backend – endpointy dołączania i stanu dla multiplayer
-
-**Cel:** Umożliwienie dołączania graczy do pokoju i pobieranie wspólnego stanu.
-
-- `POST /rooms/{room_id}/join` – body: {username: str}. Zwraca player_id (uuid) i stan pokoju.
-- `GET /rooms/{room_id}/state` – rozszerz odpowiedź o listę graczy z ich postępem (bez ujawniania secret_character). Tylko dla graczy w room.
-- W stanie zwracaj `phase`, `players`, `conversation_history` (wspólna dla duel? Dla battle royale każdy gracz może mieć osobną historię? Decyzja projektowa: wspólna historia dla uproszczenia, ale osobne liczniki pytań).
-- Zadbaj, by polling zwracał aktualny stan, aby frontend mógł reagować na zgadywania innych.
-
----
-
-## Task 2.3: Backend – system podpowiedzi (Hint)
+## Task BE-8: Backend – system podpowiedzi (Hint)
 
 **Cel:** Nowy endpoint `/hint`, który zwraca podpowiedź od LLM (cechę postaci), rejestruje użycie.
 
@@ -104,80 +78,11 @@ Nowe zadania według aneksu do specyfikacji. Skupiamy się na trybach wieloosobo
 - W trybach multiplayer (duel, battle royale) dodaj karę 30 sekund do `penalty_seconds` gracza.
 - Zaktualizuj stan gracza (hint_used=true) i zwróć nowy stan pokoju.
 
----
 
-## Task 2.4: Backend – pokoje tematyczne
-
-**Cel:** Możliwość wyboru kategorii przy tworzeniu pokoju, dynamiczny system prompt.
-
-- Dodaj opcjonalny parametr `category` w `POST /games/solo`, `/duel`, `/battle-royale`.
-- Zapisz kategorię w obiekcie pokoju.
-- Przy generowaniu promptu dla LLM dodaj linię: `"The secret character belongs to the category: {category}."`.
-- Jeśli kategoria nie podana, użyj domyślnej szerokiej puli.
-- Zaktualizuj endpointy `/question` i `/guess`, aby przekazywały kategorię do LLM.
-
----
-
-## Task 2.5: Frontend – przebudowa UI (globalny overhaul) ✅ COMPLETE
-
-**Status:** Implemented in FE-6 and FE-7 (2026-05-18)
-
-**Cel:** Nowy wygląd zgodny z wytycznymi: minimalistyczny, zaokrąglone rogi (border-radius: 12–16px), wyśrodkowanie, nowoczesna czcionka (np. Inter, Poppins), awatar AI.
-
-**Completed Changes:**
-- ✅ Usuniętniebiesko-różowy gradient. Zastosowano ciemne tło (#1a1a2e) z akcentem (#e94560).
-- ✅ Wszystkie przyciski i karty: border-radius: 12px, cień, brak ostrych krawędzi.
-- ✅ Wyśrodkowany kontener główny z responsywnym layoutem (flex 70%/30% split).
-- ✅ Dodany awatar AI (stały element graficzny – spritesheet duszka) w lewej części ekranu gry. Awatar reaguje: neutralny wyraz przy oczekiwaniu (indeksy 0-1), myślący podczas odpowiedzi (indeksy 3-4), zadowolony po wygranej (indeks 2).
-- ✅ Ujednolicony styl ekranu gry z wytycznymi UI (zaokrąglone rogi, cienie, nowoczesny design).
-- ✅ Zastosowana czcionka z Google Fonts (import w index.html).
-- ✅ Dodany system motywów (dark/light) z ThemeContext i przyciskiem ThemeToggle.
-- ✅ Całe GameView + komponenty konwertowane na styled-components.
-
-**Implementation Details:**
-- **Theme System:** ThemeContext z darkTheme i lightTheme konfiguracją
-- **Avatar:** Spritesheet `Avatars_background_free.png` z 6 frames (3×2 grid)
-- **Animation:** Inteligentny system timing z `avatarThinkingStartTimeRef` zapewniający minimum 1-sekundowy thinking state
-- **Responsive:** Układ dostosowuje się na ekranach < 1024px (vertical stack)
-
----
-
-## Task 2.6: Frontend – obsługa trybów multiplayer (duel/battle royale)
-
-**Cel:** Rozszerzenie komponentu GameRoom o możliwość gry z wieloma graczami.
-
-- Po wyborze trybu duel/battle royale, wyświetl ekran oczekiwania ("Waiting for opponent...").
-- Pobieraj stan pokoju (polling) i renderuj listę graczy z ich statusem (liczba pytań, czy użyli podpowiedzi).
-- Gdy faza "active", każdy gracz może zadawać pytania i zgadywać.
-- W przypadku zakończenia gry (phase "ended"), pokaż zwycięzcę i ranking (kto pierwszy zgadł, z uwzględnieniem kar).
-- Obsłuż przypadek, gdy inny gracz zgadnie poprawnie – twój interfejs powinien zareagować (np. zablokować dalsze pytania).
-
----
-
-## Task 2.7: Frontend – implementacja podpowiedzi
+## Task FE-9: Frontend – implementacja podpowiedzi
 
 **Cel:** Dodanie przycisku "Podpowiedź" w widoku gry, który wywołuje endpoint `/hint`.
 
 - Przycisk dostępny raz na sesję; po użyciu szarzeje.
 - Odpowiedź z backendu wyświetl w dedykowanym polu (np. dymek z podpowiedzią).
 - W multiplayer pokaż komunikat o karze (+30s) po użyciu.
-
----
-
-## Task 2.8: Frontend – wybór kategorii przy tworzeniu pokoju
-
-**Cel:** Na ekranie wyboru trybu gry dodaj rozwijaną listę kategorii.
-
-- Kategorie: "Wszystkie", "Marvel", "Polski YouTube", "Nobliści", "Postacie historyczne" (przykładowe).
-- Przekaż wybraną kategorię w body POST przy tworzeniu pokoju.
-- Komponent Home musi obsługiwać nowy parametr.
-
----
-
-## Task 2.9: Integracja i testy końcowe
-
-**Cel:** Sprawdzenie całości przepływu z nowymi funkcjami.
-
-- Przetestuj scenariusze: solo z kategorią + podpowiedź, duel dwóch graczy z podpowiedziami i karami, battle royale z wieloma graczami.
-- Upewnij się, że polling odświeża stan dla wszystkich graczy.
-- Poprawki UI i responsywności.

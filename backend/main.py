@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
@@ -128,6 +128,14 @@ class JoinRequest(BaseModel):
 
 class JoinResponse(GameState):
     player_id: str
+
+
+class CreateGameRequest(BaseModel):
+    username: str | None = None
+
+
+class CreateRoomResponse(RoomResponse):
+    player_id: str | None = None
 
 
 class QuestionRequest(BaseModel):
@@ -300,9 +308,20 @@ def health():
     return {"status": "healthy"}
 
 # Logika tworzenia pokoju
-def create_room_logic(mode: str, db: Session):
+def create_room_logic(mode: str, db: Session, creator_username: str | None = None):
     max_players = _default_max_players(mode)
-    initial_players = _normalize_players(DEFAULT_PLAYERS)
+    creator_name = creator_username.strip() if creator_username and creator_username.strip() else "Gracz1"
+    initial_players = _normalize_players([
+        {
+            "player_id": "p1",
+            "username": creator_name,
+            "guess_count": 0,
+            "hint_used": False,
+            "penalty_seconds": 0,
+            "has_guessed": False,
+            "guessed_at": None,
+        }
+    ])
     phase = "active" if len(initial_players) >= max_players else "waiting"
     new_room = RoomDB(
         room_id=str(uuid.uuid4()),
@@ -321,17 +340,44 @@ def create_room_logic(mode: str, db: Session):
     db.refresh(new_room)
     return new_room
 
-@app.post("/games/solo", response_model=RoomResponse)
-def create_solo_game(db: Session = Depends(get_db)):
-    return create_room_logic("solo", db)
+@app.post("/games/solo", response_model=CreateRoomResponse)
+def create_solo_game(request: CreateGameRequest = Body(default_factory=CreateGameRequest), db: Session = Depends(get_db)):
+    room = create_room_logic("solo", db, creator_username=request.username)
+    return {
+        "room_id": room.room_id,
+        "invite_code": room.invite_code,
+        "game_mode": room.game_mode,
+        "max_players": room.max_players,
+        "phase": room.phase,
+        "status": room.status,
+        "player_id": "p1",
+    }
 
-@app.post("/games/duel", response_model=RoomResponse)
-def create_duel_game(db: Session = Depends(get_db)):
-    return create_room_logic("duel", db)
+@app.post("/games/duel", response_model=CreateRoomResponse)
+def create_duel_game(request: CreateGameRequest = Body(default_factory=CreateGameRequest), db: Session = Depends(get_db)):
+    room = create_room_logic("duel", db, creator_username=request.username)
+    return {
+        "room_id": room.room_id,
+        "invite_code": room.invite_code,
+        "game_mode": room.game_mode,
+        "max_players": room.max_players,
+        "phase": room.phase,
+        "status": room.status,
+        "player_id": "p1",
+    }
 
-@app.post("/games/battle-royale", response_model=RoomResponse)
-def create_br_game(db: Session = Depends(get_db)):
-    return create_room_logic("battle_royale", db)
+@app.post("/games/battle-royale", response_model=CreateRoomResponse)
+def create_br_game(request: CreateGameRequest = Body(default_factory=CreateGameRequest), db: Session = Depends(get_db)):
+    room = create_room_logic("battle_royale", db, creator_username=request.username)
+    return {
+        "room_id": room.room_id,
+        "invite_code": room.invite_code,
+        "game_mode": room.game_mode,
+        "max_players": room.max_players,
+        "phase": room.phase,
+        "status": room.status,
+        "player_id": "p1",
+    }
 
 @app.get("/rooms/{room_id}/state", response_model=RoomState, response_model_exclude={"secret_character"})
 def get_room_state_polling(room_id: str, db: Session = Depends(get_db)):
@@ -392,6 +438,40 @@ def join_room(room_id: str, request: JoinRequest, db: Session = Depends(get_db))
     }
 
 
+@app.post("/rooms/{room_id}/start", response_model=RoomState, response_model_exclude={"secret_character"})
+def start_room(room_id: str, db: Session = Depends(get_db)):
+    room = _normalize_room_state(get_room_logic(room_id, db), db)
+
+    if room.phase == "ended":
+        raise HTTPException(status_code=400, detail="Game has already ended")
+
+    players = _normalize_players(_json_list_value(room.players_json, DEFAULT_PLAYERS))
+    required_players = 2 if room.game_mode == "duel" else 3 if room.game_mode == "battle_royale" else 1
+
+    if len(players) < required_players:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Potrzebnych jest co najmniej {required_players} graczy, aby rozpocząć tę grę.",
+        )
+
+    room.phase = "active"
+    room.status = "active"
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+
+    return get_room_with_state(room_id, db)
+
+
+@app.get("/rooms/invite/{invite_code}")
+def get_room_by_invite(invite_code: str, db: Session = Depends(get_db)):
+    normalized_code = invite_code.strip().upper()
+    room = db.query(RoomDB).filter(RoomDB.invite_code == normalized_code).first()
+    if room is None:
+        raise HTTPException(status_code=404, detail="Invite code not found")
+    return {"room_id": room.room_id}
+
+
 @app.post("/rooms/{room_id}/question", response_model=QuestionResponse)
 def submit_question(room_id: str, request: QuestionRequest, db: Session = Depends(get_db)):
     """Submit a question and get AI response (Tak/Nie/Nie wiem)."""
@@ -429,6 +509,12 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
         logger.exception("LLM timeout / error for room %s", room_id)
         result = {"answer": "Nie wiem"}
 
+    for p in players:
+        if p.get("player_id") == request.player_id:
+            p["guess_count"] = p.get("guess_count", 0) + 1
+            break
+
+    room.players_json = json.dumps(players, ensure_ascii=False)
     history.append({"role": "player", "question": question})
     history.append({"role": "ai", "answer": result["answer"]})
 
