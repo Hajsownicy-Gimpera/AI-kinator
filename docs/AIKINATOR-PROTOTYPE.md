@@ -9,6 +9,7 @@
 - **BE-3** (2026-04-18): `GET /rooms/{room_id}/state` returns dummy room state
 - **BE-4** (2026-04-29): RoomDB expanded with persisted phase/player/history state
 - **BE-5** (2026-04-29): `POST /rooms/{room_id}/question` implemented with LLMChain
+- **BE-8** (2026-05-26): `POST /rooms/{room_id}/hint` implemented with LLM-based character clues, per-player one-time usage tracking, and multiplayer penalty handling (`+30s`). Tests added: `backend/tests/test_hint_endpoint.py`.
 - **FE-1** (2026-04-13): Frontend initialization + React
 - **FE-2** (2026-04-15): Home screen with game mode selection
 - **FE-3**: GameView component with polling
@@ -97,6 +98,8 @@ Nowe zadania według aneksu do specyfikacji. Skupiamy się na trybach wieloosobo
 ## Task 2.3: Backend – system podpowiedzi (Hint)
 
 **Cel:** Nowy endpoint `/hint`, który zwraca podpowiedź od LLM (cechę postaci), rejestruje użycie.
+
+**Status:** ✅ COMPLETE (BE-8, 2026-05-26)
 
 - `POST /rooms/{room_id}/hint` – body: {player_id: str}. Sprawdź, czy gracz już użył podpowiedzi – jeśli tak, zwróć błąd 400.
 - Wywołaj LLM z promptem: "Podaj jedną charakterystyczną cechę postaci, nie zdradzając jej nazwy. Postać: [CHARACTER]."
