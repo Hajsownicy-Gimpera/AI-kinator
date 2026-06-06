@@ -23,6 +23,9 @@ const GameView = () => {
   const messagesEndRef = useRef(null);
   const avatarThinkingStartTimeRef = useRef(null);
   const [copied, setCopied] = useState(false);
+  const [hintText, setHintText] = useState('');
+  const [hintLoading, setHintLoading] = useState(false);
+  const [showHintModal, setShowHintModal] = useState(false);
 
   // Fetch room state callback (without conversation history)
   const fetchRoomState = useCallback(async () => {
@@ -274,6 +277,38 @@ const GameView = () => {
   }
 };
 
+  const handleRequestHint = async () => {
+    if (!currentPlayerId) {
+      setError('Nie znaleziono ID gracza');
+      return;
+    }
+
+    try {
+      setHintLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_URL}/rooms/${roomId}/hint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_id: currentPlayerId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Nie udało się pobrać podpowiedzi');
+      }
+
+      const data = await response.json();
+      setHintText(data.hint_text);
+      setShowHintModal(true);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error requesting hint:', err);
+    } finally {
+      setHintLoading(false);
+    }
+  };
+
   // EKRAN ŁADOWANIA
   if (loading) {
     return (
@@ -344,6 +379,26 @@ const GameView = () => {
         </div>
       </header>
 
+      {/* MODAL PODPOWIEDZI */}
+      {showHintModal && (
+        <div className="hint-modal-overlay" onClick={() => setShowHintModal(false)}>
+          <div className="hint-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="hint-modal-header">Podpowiedź</div>
+            <div className="hint-modal-content">
+              <p>{hintText}</p>
+              {roomState?.game_mode !== 'solo' && (
+                <div className="hint-modal-penalty">
+                  ⏱️ <strong>+30 sekund kary</strong> w trybie multiplayer
+                </div>
+              )}
+            </div>
+            <button className="hint-modal-close" onClick={() => setShowHintModal(false)}>
+              Zamknij
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className="center-stage">
         
         {/* LEWY KONTENER */}
@@ -393,17 +448,32 @@ const GameView = () => {
             <button className="btn-action" onClick={handleGuess} disabled={submitting || !question.trim() || isGameLocked}>
               Zgaduję
             </button>
+            <button 
+              className="btn-action btn-hint" 
+              onClick={handleRequestHint} 
+              disabled={submitting || hintLoading || (currentPlayerId && roomState?.players?.find(p => p.player_id === currentPlayerId)?.hint_used) || isGameLocked}
+              title={currentPlayerId && roomState?.players?.find(p => p.player_id === currentPlayerId)?.hint_used ? 'Podpowiedź już użyta' : 'Użyj podpowiedzi (jednorazowo)'}
+            >
+              Podpowiedź
+            </button>
           </form>
         </div>
 
         {/* PRAWY KONTENER */}
         <div className="right-panel">
           {roomState.max_players > 1 && (
-            <PlayersList 
-              players={roomState.players} 
-              currentPlayerId={currentPlayerId} 
-              gameMode={roomState.game_mode}
-            />
+            <>
+              <PlayersList 
+                players={roomState.players} 
+                currentPlayerId={currentPlayerId} 
+                gameMode={roomState.game_mode}
+              />
+              {roomState?.players?.find(p => p.player_id === currentPlayerId)?.penalty_seconds > 0 && (
+                <div className="penalty-indicator">
+                  ⏱️ Kara: {roomState.players.find(p => p.player_id === currentPlayerId).penalty_seconds}s
+                </div>
+              )}
+            </>
           )}
         </div>
 
