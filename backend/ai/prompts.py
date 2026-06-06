@@ -35,10 +35,38 @@ Twoja odpowiedź:\
 
 VALID_ANSWERS = {"Tak", "Nie", "Nie wiem"}
 
+HINT_PROMPT = """\
+Jesteś AI prowadzącym grę w zgadywanie postaci (w stylu Akinatora).
+
+Sekretna postać to: {secret_character}
+
+Podaj jedną krótką, charakterystyczną cechę tej postaci.
+Nie zdradzaj jej nazwy ani nie dodawaj wyjaśnień.
+Odpowiedz po polsku, krótko i konkretnie.
+"""
+
+DUMMY_HINTS = {
+    "Albert Einstein": "To był fizyk kojarzony z teorią względności.",
+    "Cleopatra": "Była władczynią starożytnego Egiptu.",
+    "Sherlock Holmes": "To fikcyjny detektyw z literatury.",
+    "Marie Curie": "Była pionierką badań nad promieniotwórczością.",
+    "Batman": "To zamaskowany bohater z Gotham.",
+    "Napoleon Bonaparte": "Był francuskim wodzem i cesarzem.",
+    "Frida Kahlo": "Była meksykańską malarką.",
+    "Harry Potter": "To czarodziej z serii książek i filmów.",
+    "Leonardo da Vinci": "To renesansowy artysta i wynalazca.",
+    "Pikachu": "To żółty elektryczny stworek z popkultury.",
+}
+
 
 def get_dummy_answer() -> str:
     """Return a random answer from the valid set (for use without API key)."""
     return random.choice(list(VALID_ANSWERS))
+
+
+def get_dummy_hint(character_name: str) -> str:
+    """Return a deterministic hint for the configured character when no API key is available."""
+    return DUMMY_HINTS.get(character_name, "To postać z wyraźną, rozpoznawalną cechą.")
 
 
 def format_conversation_history(history: list[dict]) -> str:

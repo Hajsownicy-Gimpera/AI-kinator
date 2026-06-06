@@ -154,11 +154,19 @@ class GuessRequest(BaseModel):
     guess: str
 
 
+class HintRequest(BaseModel):
+    player_id: str
+
+
 class GuessResponse(BaseModel):
     correct: bool
     winner_id: str | None
     message: str
     updated_history: list[ConversationEntry]
+
+
+class HintResponse(BaseModel):
+    hint_text: str
 
 
 # --- HELPER FUNCTIONS ---
@@ -240,6 +248,21 @@ def _normalize_room_state(room: RoomDB, db: Session) -> RoomDB:
         db.refresh(room)
 
     return room
+
+
+def _ensure_secret_character(room: RoomDB, room_id: str, db: Session) -> str:
+    secret_character = (room.secret_character or "").strip()
+    if not secret_character:
+        secret_character = random.choice(EXAMPLE_CHARACTERS)
+        room.secret_character = secret_character
+        logger.warning(
+            "Room %s had no secret_character; assigned fallback character for legacy/migrated room",
+            room_id,
+        )
+        db.add(room)
+        db.commit()
+        db.refresh(room)
+    return secret_character
 
 
 def get_room_with_state(room_id: str, db: Session) -> RoomState:
@@ -493,14 +516,7 @@ def submit_question(room_id: str, request: QuestionRequest, db: Session = Depend
 
     history = _json_list_value(room.history_json, DEFAULT_HISTORY)
 
-    secret_character = (room.secret_character or "").strip()
-    if not secret_character:
-        secret_character = random.choice(EXAMPLE_CHARACTERS)
-        room.secret_character = secret_character
-        logger.warning(
-            "Room %s had no secret_character; assigned fallback character for legacy/migrated room",
-            room_id,
-        )
+    secret_character = _ensure_secret_character(room, room_id, db)
 
     chain = LLMChain(character_name=secret_character)
     try:
@@ -550,14 +566,7 @@ def submit_guess(room_id: str, request: GuessRequest, db: Session = Depends(get_
     if not any(p.get("player_id") == request.player_id for p in players):
         raise HTTPException(status_code=404, detail="Player not in room")
 
-    secret_character = (room.secret_character or "").strip()
-    if not secret_character:
-        secret_character = random.choice(EXAMPLE_CHARACTERS)
-        room.secret_character = secret_character
-        logger.warning(
-            "Room %s had no secret_character; assigned fallback character for legacy/migrated room",
-            room_id,
-        )
+    secret_character = _ensure_secret_character(room, room_id, db)
 
     correct = _normalize_for_guess(guess) == _normalize_for_guess(secret_character)
     history = _json_list_value(room.history_json, DEFAULT_HISTORY)
@@ -600,3 +609,35 @@ def submit_guess(room_id: str, request: GuessRequest, db: Session = Depends(get_
         "message": message,
         "updated_history": history,
     }
+
+
+@app.post("/rooms/{room_id}/hint", response_model=HintResponse)
+def submit_hint(room_id: str, request: HintRequest, db: Session = Depends(get_db)):
+    """Submit a hint request and return one short clue about the secret character."""
+    room = _normalize_room_state(get_room_logic(room_id, db), db)
+
+    if room.phase == "ended":
+        raise HTTPException(status_code=400, detail="Game has already ended")
+
+    players = _normalize_players(_json_list_value(room.players_json, DEFAULT_PLAYERS))
+    player = next((p for p in players if p.get("player_id") == request.player_id), None)
+    if player is None:
+        raise HTTPException(status_code=404, detail="Player not in room")
+    if player.get("hint_used"):
+        raise HTTPException(status_code=400, detail="Hint already used")
+
+    secret_character = _ensure_secret_character(room, room_id, db)
+    chain = LLMChain(character_name=secret_character)
+    result = chain.get_hint()
+    hint_text = result.get("hint_text", "").strip() or "To postać z wyraźną, rozpoznawalną cechą."
+
+    player["hint_used"] = True
+    if room.game_mode in {"duel", "battle_royale"}:
+        player["penalty_seconds"] = int(player.get("penalty_seconds", 0) or 0) + 30
+
+    room.players_json = json.dumps(players, ensure_ascii=False)
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+
+    return {"hint_text": hint_text}

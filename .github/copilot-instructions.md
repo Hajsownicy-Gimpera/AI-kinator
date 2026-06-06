@@ -60,6 +60,7 @@ cd backend && uv sync
 - `GET /rooms/{room_id}/join` – Full room state + conversation history (initial load only)
 - `GET /rooms/{room_id}/state` – Current game state for polling (NO conversation history)
 - `POST /rooms/{room_id}/question` – Submit question and get AI response
+- `POST /rooms/{room_id}/hint` – Submit a hint request and get a text clue, with one-time per-player usage and multiplayer penalty handling
 
 ### Frontend (React)
 

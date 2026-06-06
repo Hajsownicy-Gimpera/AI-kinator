@@ -72,6 +72,8 @@ Nowe zadania według aneksu do specyfikacji. Skupiamy się na trybach wieloosobo
 
 **Cel:** Nowy endpoint `/hint`, który zwraca podpowiedź od LLM (cechę postaci), rejestruje użycie.
 
+**Status:** ✅ COMPLETE (BE-8, 2026-05-26)
+
 - `POST /rooms/{room_id}/hint` – body: {player_id: str}. Sprawdź, czy gracz już użył podpowiedzi – jeśli tak, zwróć błąd 400.
 - Wywołaj LLM z promptem: "Podaj jedną charakterystyczną cechę postaci, nie zdradzając jej nazwy. Postać: [CHARACTER]."
 - Odpowiedź LLM zwróć jako `hint_text`.

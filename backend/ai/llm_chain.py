@@ -7,10 +7,12 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from ai.config import get_llm
 from ai.prompts import (
+    HINT_PROMPT,
     SYSTEM_PROMPT,
     VALID_ANSWERS,
     format_conversation_history,
     get_dummy_answer,
+    get_dummy_hint,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,6 +76,43 @@ class LLMChain:
                     time.sleep(RETRY_BACKOFF * attempt)
 
         return {"answer": "Nie wiem"}
+
+    def get_hint(self) -> dict:
+        """Return a short character hint."""
+        if self.llm is None:
+            logger.info("Hint endpoint: using DUMMY mode (no GOOGLE_API_KEY)")
+            return {"hint_text": get_dummy_hint(self.character_name)}
+
+        logger.info("Hint endpoint: calling Google AI Studio (gemini)")
+
+        prompt_text = HINT_PROMPT.format(secret_character=self.character_name)
+
+        messages = [
+            SystemMessage(content=prompt_text),
+            HumanMessage(content="Podaj jedną krótką podpowiedź."),
+        ]
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = self.llm.invoke(messages)
+                content = response.content
+                if isinstance(content, list):
+                    content = "".join(
+                        part.get("text", "") if isinstance(part, dict) else str(part)
+                        for part in content
+                    )
+                hint_text = str(content).strip()
+                if hint_text:
+                    return {"hint_text": hint_text}
+            except Exception:
+                logger.warning(
+                    "Hint LLM call attempt %d/%d failed", attempt, MAX_RETRIES,
+                    exc_info=True,
+                )
+                if attempt < MAX_RETRIES:
+                    time.sleep(RETRY_BACKOFF * attempt)
+
+        return {"hint_text": get_dummy_hint(self.character_name)}
 
     @staticmethod
     def _validate(raw_response: str) -> str:
