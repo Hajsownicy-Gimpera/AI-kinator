@@ -5,7 +5,7 @@ import './WinScreen.css';
 const WinScreen = ({ roomState, conversationHistory, currentPlayerId }) => {
   const navigate = useNavigate();
 
-  const questionCount = conversationHistory.filter(entry => entry.role === 'player').length;
+  const questionCount = roomState.players.find(p => p.player_id === currentPlayerId).guess_count;
   const isWinner = currentPlayerId === roomState.winner_id;
   const gameMode = roomState.game_mode;
 

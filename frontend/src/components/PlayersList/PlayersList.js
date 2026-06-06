@@ -31,10 +31,10 @@ const PlayersList = styled.div`
 `;
 
 const PlayerCard = styled.div`
-  background: ${props => (props.isCurrentUser ? 'rgba(112, 15, 247, 0.24)' : 'rgba(255, 255, 255, 0.06)')};
+  background: ${props => (props.$isCurrentUser ? 'rgba(112, 15, 247, 0.24)' : 'rgba(255, 255, 255, 0.06)')};
   padding: 14px 16px;
   border-radius: 14px;
-  border-left: 3px solid ${props => (props.isCurrentUser ? '#9034f1' : 'rgba(112, 15, 247, 0.2)')};
+  border-left: 3px solid ${props => (props.$isCurrentUser ? '#9034f1' : 'rgba(112, 15, 247, 0.2)')};
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -96,7 +96,7 @@ const ComponentPlayersList = ({ players, currentPlayerId, gameMode }) => {
       </Title>
       <PlayersList>
         {sortedPlayers.map(player => (
-          <PlayerCard key={player.player_id} isCurrentUser={player.player_id === currentPlayerId}>
+          <PlayerCard key={player.player_id} $isCurrentUser={player.player_id === currentPlayerId}>
             <PlayerInfo>
               <PlayerName>
                 {player.username}
