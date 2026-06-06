@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import WinScreen from '../../components/WinScreen/WinScreen';
+import WaitingScreen from '../../components/WaitingScreen/WaitingScreen';
+import PlayersList from '../../components/PlayersList/PlayersList';
 import PlayerAvatar from '../../components/PlayerAvatar/PlayerAvatar';
 import './GameView.css';
 
@@ -15,7 +17,9 @@ const GameView = () => {
   const [error, setError] = useState(null);
   const [question, setQuestion] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [avatarIndex, setAvatarIndex] = useState(0);
+  const [currentPlayerId, setCurrentPlayerId] = useState(null);
   const messagesEndRef = useRef(null);
   const avatarThinkingStartTimeRef = useRef(null);
   const [copied, setCopied] = useState(false);
@@ -42,6 +46,12 @@ const GameView = () => {
       try {
         setLoading(true);
         setError(null);
+
+        const storedPlayerId = localStorage.getItem(`player_id_${roomId}`);
+        if (storedPlayerId) {
+          setCurrentPlayerId(storedPlayerId);
+        }
+
         const response = await fetch(`${API_URL}/rooms/${roomId}/join`);
         if (!response.ok) {
           throw new Error(`Failed to fetch history: ${response.statusText}`);
@@ -49,7 +59,6 @@ const GameView = () => {
         const data = await response.json();
         const { conversation_history, ...stateWithoutHistory } = data;
         setRoomState(stateWithoutHistory);
-        console.log("new conversation")
         setConversationHistory(conversation_history || []);
       } catch (err) {
         setError(err.message);
@@ -61,6 +70,14 @@ const GameView = () => {
 
     fetchHistory();
   }, [roomId]);
+
+  useEffect(() => {
+    if (!currentPlayerId && roomState?.players?.length === 1) {
+      const fallbackId = roomState.players[0].player_id;
+      setCurrentPlayerId(fallbackId);
+      localStorage.setItem(`player_id_${roomId}`, fallbackId);
+    }
+  }, [currentPlayerId, roomState, roomId]);
 
   // Poll room state every 3 seconds (but NOT when game is won)
   useEffect(() => {
@@ -102,11 +119,18 @@ const GameView = () => {
     }
   }, [submitting]);
 
+  const isGameLocked = roomState?.phase === 'ended' || (roomState?.game_mode === 'duel' && roomState?.winner_id && roomState?.winner_id !== currentPlayerId);
+
   const handleSubmitQuestion = async (e) => {
     e.preventDefault();
 
     if (!question.trim()) {
       setError('Pytanie nie może być puste');
+      return;
+    }
+
+    if (isGameLocked) {
+      setError('Gra już się zakończyła lub inny gracz wygrał.');
       return;
     }
 
@@ -120,7 +144,7 @@ const GameView = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          player_id: 'p1', // TODO: Get from user context
+          player_id: currentPlayerId,
           question: question.trim(),
         }),
       });
@@ -155,6 +179,11 @@ const GameView = () => {
       return;
     }
 
+    if (isGameLocked) {
+      setError('Gra już się zakończyła lub inny gracz wygrał.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
@@ -163,7 +192,7 @@ const GameView = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          player_id: 'p1', // TODO: Get from user context
+          player_id: currentPlayerId,
           guess: guessText,
         }),
       });
@@ -180,10 +209,16 @@ const GameView = () => {
 
       const responseData = await response.json();
 
+      setConversationHistory(prevHistory => [
+        ...prevHistory,
+        { role: 'player', question: guessText },
+        { role: 'ai', answer: responseData.message || (responseData.correct ? 'Tak' : 'Nie') },
+      ]);
+
       if (responseData.correct) {
         setRoomState(prevState => ({
           ...prevState,
-          winner_id: responseData.winner_id
+          winner_id: responseData.winner_id,
         }));
         setError(null);
       } else {
@@ -196,6 +231,32 @@ const GameView = () => {
       console.error('Error submitting guess:', err);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleStartGame = async () => {
+    if (!roomState?.room_id) return;
+
+    setIsStarting(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_URL}/rooms/${roomId}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail || response.statusText);
+      }
+
+      const updatedRoomState = await response.json();
+      setRoomState(updatedRoomState);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error starting room:', err);
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -248,9 +309,21 @@ const GameView = () => {
     );
   }
 
-  // EKRAN ZWYCIĘSTWA
+  // WAITING SCREEN FOR MULTIPLAYER MODES
+  if (roomState.phase === 'waiting' && roomState.max_players > 1) {
+    return (
+      <WaitingScreen
+        roomState={roomState}
+        currentPlayerId={currentPlayerId}
+        onStartGame={handleStartGame}
+        isStarting={isStarting}
+      />
+    );
+  }
+
+  // WIN SCREEN
   if (roomState.winner_id) {
-    return <WinScreen roomState={roomState} conversationHistory={conversationHistory} />;
+    return <WinScreen roomState={roomState} conversationHistory={conversationHistory} currentPlayerId={currentPlayerId} />;
   }
 
   // GŁÓWNY WIDOK GRY
@@ -284,6 +357,11 @@ const GameView = () => {
             Zadaj pytanie AI-Kinatorowi ({conversationHistory?.length || 0})
           </div>
           <div className="chat-messages">
+            {isGameLocked && (
+              <div className="chat-info">
+                Gra została zakończona lub inny gracz wygrał. Możesz wrócić do menu.
+              </div>
+            )}
             {error && <div className="chat-error">{error}</div>}
             {conversationHistory.length === 0 ? (
               <div className="chat-empty">Zadaj pierwsze pytanie!</div>
@@ -309,10 +387,10 @@ const GameView = () => {
               }}
               disabled={submitting}
             />
-            <button className="btn-action" onClick={handleSubmitQuestion} disabled={submitting || !question.trim()}>
+            <button className="btn-action" onClick={handleSubmitQuestion} disabled={submitting || !question.trim() || isGameLocked}>
               Pytam
             </button>
-            <button className="btn-action" onClick={handleGuess} disabled={submitting || !question.trim()}>
+            <button className="btn-action" onClick={handleGuess} disabled={submitting || !question.trim() || isGameLocked}>
               Zgaduję
             </button>
           </form>
@@ -320,6 +398,13 @@ const GameView = () => {
 
         {/* PRAWY KONTENER */}
         <div className="right-panel">
+          {roomState.max_players > 1 && (
+            <PlayersList 
+              players={roomState.players} 
+              currentPlayerId={currentPlayerId} 
+              gameMode={roomState.game_mode}
+            />
+          )}
         </div>
 
       </main>

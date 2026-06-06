@@ -78,6 +78,32 @@ def test_join_endpoint_returns_full_history(client_and_main):
     assert payload["conversation_history"][1]["answer"] == "Tak"
 
 
+def test_create_room_with_username_returns_player_id(client_and_main):
+    client, _ = client_and_main
+
+    create_response = client.post("/games/duel", json={"username": "Hero"})
+    assert create_response.status_code == 200
+    payload = create_response.json()
+    assert payload["room_id"]
+    assert payload["player_id"] == "p1"
+    assert payload["invite_code"]
+
+    state = client.get(f"/rooms/{payload['room_id']}/state").json()
+    assert state["players"][0]["player_id"] == "p1"
+    assert state["players"][0]["username"] == "Hero"
+
+
+def test_room_lookup_by_invite_code(client_and_main):
+    client, _ = client_and_main
+
+    create_response = client.post("/games/duel", json={"username": "Hero"})
+    payload = create_response.json()
+
+    invite_response = client.get(f"/rooms/invite/{payload['invite_code']}")
+    assert invite_response.status_code == 200
+    assert invite_response.json()["room_id"] == payload["room_id"]
+
+
 def test_join_endpoint_creates_player_and_activates_room_when_full(client_and_main):
     client, _ = client_and_main
 
@@ -102,6 +128,45 @@ def test_join_endpoint_creates_player_and_activates_room_when_full(client_and_ma
     assert state_payload["phase"] == "active"
     assert len(state_payload["players"]) == 2
     assert "conversation_history" not in state_payload
+
+
+def test_start_room_endpoint_requires_minimum_players(client_and_main):
+    client, _ = client_and_main
+
+    create_response = client.post("/games/duel")
+    assert create_response.status_code == 200
+    room_payload = create_response.json()
+
+    start_response = client.post(f"/rooms/{room_payload['room_id']}/start")
+    assert start_response.status_code == 400
+    assert "Potrzebnych jest co najmniej" in start_response.json()["detail"]
+
+
+def test_start_room_endpoint_activates_room_when_minimum_players_are_present(client_and_main):
+    client, _ = client_and_main
+
+    create_response = client.post("/games/battle-royale", json={"username": "Host"})
+    assert create_response.status_code == 200
+    room_payload = create_response.json()
+
+    join_response = client.post(
+        f"/rooms/{room_payload['room_id']}/join",
+        json={"username": "Ala", "invite_code": room_payload["invite_code"]},
+    )
+    assert join_response.status_code == 200
+
+    join_response_two = client.post(
+        f"/rooms/{room_payload['room_id']}/join",
+        json={"username": "Marek", "invite_code": room_payload["invite_code"]},
+    )
+    assert join_response_two.status_code == 200
+
+    start_response = client.post(f"/rooms/{room_payload['room_id']}/start")
+    assert start_response.status_code == 200
+    start_payload = start_response.json()
+    assert start_payload["phase"] == "active"
+    assert start_payload["status"] == "active"
+    assert len(start_payload["players"]) == 3
 
 
 def test_get_room_state_returns_404_for_unknown_room_id(client_and_main):
