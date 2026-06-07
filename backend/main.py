@@ -44,16 +44,7 @@ MODE_MAX_PLAYERS = {
     "battle_royale": 10,
 }
 
-DEFAULT_HISTORY = [
-    {
-        "role": "player",
-        "question": "Czy ta postac jest prawdziwa?",
-    },
-    {
-        "role": "ai",
-        "answer": "Tak",
-    },
-]
+DEFAULT_HISTORY = []
 
 # Model bazy danych
 class RoomDB(Base):
@@ -193,15 +184,16 @@ def _normalize_for_guess(value: str) -> str:
 
 def _json_list_value(raw_value, fallback):
     if not raw_value:
-        return fallback
+        # Zwracamy KOPIĘ fallbacku, aby uniknąć modyfikowania globalnej zmiennej
+        return list(fallback) if isinstance(fallback, list) else fallback
 
     try:
         parsed_value = json.loads(raw_value)
     except (TypeError, json.JSONDecodeError):
-        return fallback
+        return list(fallback) if isinstance(fallback, list) else fallback
 
-    if not isinstance(parsed_value, list) or not parsed_value:
-        return fallback
+    if not isinstance(parsed_value, list):
+        return list(fallback) if isinstance(fallback, list) else fallback
 
     return parsed_value
 
