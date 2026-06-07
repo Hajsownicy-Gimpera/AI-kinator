@@ -1,9 +1,41 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PlayerAvatar from '../PlayerAvatar/PlayerAvatar';
 import './WinScreen.css';
 
-const WinScreen = ({ roomState, conversationHistory, currentPlayerId }) => {
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+const WinScreen = ({conversationHistory, currentPlayerId, roomId }) => {
   const navigate = useNavigate();
+  const [roomState, setRoomState] = useState(null);
+
+  useEffect(() => {
+    if (!roomId) return;
+
+    const fetchCurrentState = async () => {
+      try {
+        const response = await fetch(`${API_URL}/rooms/${roomId}/state`);
+        if (response.ok) {
+          const data = await response.json();
+          setRoomState(data);
+        }
+      } catch (err) {
+        console.error('Błąd podczas pobierania aktualnego stanu pokoju w WinScreen:', err);
+      }
+    };
+
+    fetchCurrentState(); // Fetch immediately on component creation
+  }, [roomId]);
+
+  if (!roomState || !roomState.players) {
+    return (
+      <div className="win-screen">
+        <div className="win-container">
+          <h2 className="win-title" style={{ fontSize: '1.5rem', color: 'white' }}>Ładowanie wyników...</h2>
+        </div>
+      </div>
+    );
+  }
 
   const questionCount = roomState.players.find(p => p.player_id === currentPlayerId).guess_count;
   const isWinner = currentPlayerId === roomState.winner_id;

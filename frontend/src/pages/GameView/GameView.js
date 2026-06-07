@@ -358,7 +358,11 @@ const GameView = () => {
 
   // WIN SCREEN
   if (roomState.winner_id) {
-    return <WinScreen roomState={roomState} conversationHistory={conversationHistory} currentPlayerId={currentPlayerId} />;
+    return <WinScreen 
+      conversationHistory={conversationHistory} 
+      currentPlayerId={currentPlayerId}
+      roomId={roomId}
+      />;
   }
 
   // GŁÓWNY WIDOK GRY
